@@ -27,25 +27,25 @@ jobs:
         with:
           context: ./ui_service
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/ui:$(date-'%d-%m-%Y')
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/ui:$(date-'%Y-%m-%d%H%M%S')
 
       - name: Build and push Docker image for API service
         uses: docker/build-push-action@v5
         with:
           context: ./api_service
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/api:$(date-'%d-%m-%Y')
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/api:$(date-'%Y-%m-%d%H%M%S')
       
       - name: Build and push Docker image for Recommender service
         uses: docker/build-push-action@v5
         with:
           context: ./recommender_service
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/model:$(date-'%d-%m-%Y')
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/model:$(date-'%Y-%m-%d%H%M%S')
       
       - name: Build and push Docker image for Preprocessing service
         uses: docker/build-push-action@v5
         with:
           context: ./preprocessing_service
           push: true
-          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/preprocessing:$(date-'%d-%m-%Y')
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/preprocessing:$(date-'%Y-%m-%d%H%M%S')
