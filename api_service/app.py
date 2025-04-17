@@ -46,7 +46,7 @@ def recommend(movie: str):
 
 @app.get("/")
 def root():
-    return {"message": "Recommendation API is running"}
+    return {"message": "Recommendation API is running Now!"}
 
 @app.get("/recommend/{movie_name}")
 def get_recommendations(movie_name: str):
