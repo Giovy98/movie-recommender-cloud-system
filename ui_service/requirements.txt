@@ -1,0 +1,6 @@
+pandas
+numpy
+streamlit
+requests
+watchdog
+google-cloud-storage
