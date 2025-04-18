@@ -35,26 +35,26 @@ def get_gcs_bucket():
 def load_data():
     bucket = get_gcs_bucket()
     try:
-        logging.info("📦 Caricamento dataset da GCS")
+        logging.info("Caricamento dataset da GCS")
         data_blob = bucket.blob(DATA_BLOB)
         df_bytes = data_blob.download_as_bytes()
         df = pd.read_csv(io.BytesIO(df_bytes))
         df['title_lower'] = df['title'].str.lower()
         return df
     except Exception as e:
-        logging.error(f"❌ Errore nel caricamento del dataset: {e}")
+        logging.error(f"Errore nel caricamento del dataset: {e}")
         raise RuntimeError("Errore nel caricamento del dataset")
 
 @lru_cache()
 def load_model():
     bucket = get_gcs_bucket()
     try:
-        logging.info("📦 Caricamento matrice di similarità da GCS")
+        logging.info("Caricamento matrice di similarità da GCS")
         model_blob = bucket.blob(MODEL_BLOB)
         model_bytes = model_blob.download_as_bytes()
         return pickle.loads(model_bytes)
     except Exception as e:
-        logging.error(f"❌ Errore nel caricamento del modello: {e}")
+        logging.error(f"Errore nel caricamento del modello: {e}")
         raise RuntimeError("Errore nel caricamento del modello")
 
 # === Schema per richieste POST ===
@@ -86,7 +86,7 @@ def recommend(movie: str):
 # === Endpoints ===
 @app.get("/", tags=["Info"])
 def root():
-    return {"message": "🚀 Recommendation API is running!"}
+    return {"message": "Recommendation API is running!"}
 
 @app.get("/healthz", tags=["Monitoring"])
 def health_check():

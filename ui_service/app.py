@@ -30,7 +30,7 @@ def load_movies_from_gcs():
 # === Funzione per ottenere raccomandazioni dall’API ===
 def get_recommendations(movie_title: str):
     try:
-        response = requests.post(API_URL, json={"movie_name": movie_title}, timeout=30)
+        response = requests.post(API_URL, json={"movie_name": movie_title}, timeout=10)
         response.raise_for_status() # Controlla se la risposta è OK
         return response.json()["recommendations"]
     except requests.exceptions.RequestException as e:
@@ -39,19 +39,19 @@ def get_recommendations(movie_title: str):
 
 # === Interfaccia Streamlit ===
 def main():
-    st.set_page_config(page_title="🎬 Movie Recommender", layout="centered")
+    st.set_page_config(page_title="Movie Recommender", layout="centered")
     st.title("🎬 Movie Recommender System")
 
     movie_list = load_movies_from_gcs()
 
     if not movie_list:
-        st.warning("⚠️ Nessun film trovato nel dataset.")
+        st.warning(" Nessun film trovato nel dataset.")
         return
 
     selected_movie = st.selectbox("🎞️ Seleziona un film tra quelli disponibili:", movie_list)
 
-    if st.button('🎯 Mostra Raccomandazioni'):
-        with st.spinner("⏳ Sto cercando film simili..."):
+    if st.button('Mostra Raccomandazioni'):
+        with st.spinner("Sto cercando film simili..."):
             recommendations = get_recommendations(selected_movie)
 
             if recommendations:
