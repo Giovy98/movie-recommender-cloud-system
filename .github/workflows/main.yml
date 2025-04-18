@@ -34,8 +34,8 @@ jobs:
       run: |
         echo "Contenuto della cartella data:"
         ls -la ./data/
-        gsutil -m cp -r ./data/* gs://${{ secrets.GCP_BUCKET_NAME }}/
-        echo "Dati caricati con successo su gs://${{ secrets.GCP_BUCKET_NAME }}/"
+        gsutil -m cp -r ./data/* gs://${{ secrets.GCP_BUCKET_NAME }}/raw
+        echo "Dati caricati con successo su gs://${{ secrets.GCP_BUCKET_NAME }}/raw"
 
   build-and-push-images:
     name: Build e Push Docker Images
