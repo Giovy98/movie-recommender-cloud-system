@@ -2,12 +2,11 @@ name: Carica dati e pubblica immagini Docker
 
 on:
   push:
-    branches: cloud-provider
+    branches: [ cloud-provider ]
   workflow_dispatch:  # Per attivare manualmente il workflow
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  SERVICE_ACCOUNT: ${{ secrets.GCP_SA_KEY }}
 
 jobs:
   setup-and-upload-data:
@@ -18,13 +17,17 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # Autenticazione con Google Cloud
-    - name: Set up Google Cloud SDK
+    # Autenticazione con Google Cloud (approccio aggiornato)
+    - name: Google Auth
+      id: auth
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
       with:
-        service_account_key: ${{ secrets.GCP_SA_KEY }}
         project_id: ${{ secrets.GCP_PROJECT_ID }}
-        export_default_credentials: true
 
     # Carica i dati dalla cartella locale al bucket Google Cloud
     - name: Carica dati sul bucket Google Cloud Storage
@@ -47,13 +50,17 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    # Autenticazione con Google Cloud
-    - name: Set up Google Cloud SDK
+    # Autenticazione con Google Cloud (approccio aggiornato)
+    - name: Google Auth
+      id: auth
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
       with:
-        service_account_key: ${{ secrets.GCP_SA_KEY }}
         project_id: ${{ secrets.GCP_PROJECT_ID }}
-        export_default_credentials: true
 
     # Configurazione Docker per l'autenticazione con Artifact Registry
     - name: Configura Docker per Artifact Registry
