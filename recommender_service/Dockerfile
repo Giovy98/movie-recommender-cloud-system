@@ -1,16 +1,22 @@
-# Usa un'immagine Python ufficiale
+# Base image con Python
 FROM python:3.10-slim
 
-# Imposta la directory di lavoro 
+# Variabili d'ambiente per evitare buffer e impostare UTF-8
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    LANG=C.UTF-8
+
+# Crea una directory di lavoro
 WORKDIR /app
 
-RUN mkdir -p /app/similiarityMatrix
-
+# Copia requirements (può essere generato anche automaticamente se serve)
 COPY requirements.txt .
 
 # Installa le dipendenze
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copia tutti i file del progetto nella directory del container
 COPY . .
 
-CMD ["python3","-u","recommender.py"]
+# Comando di default
+CMD ["python", "recommender_k8s_local.py"]

@@ -2,56 +2,103 @@ from fastapi import FastAPI, HTTPException
 import pickle
 import pandas as pd
 import logging
-from pathlib import Path
 from pydantic import BaseModel
+from google.cloud import storage
+import io
+from functools import lru_cache
 
-# Configurazione del logging
+# Configurazione logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-app = FastAPI()
+# Config
+GCS_KEY_PATH = "/var/secrets/key.json"
+BUCKET_NAME = "dataset_sistema_raccomandazione"
+DATA_BLOB = "processed/recsys_df.csv"
+MODEL_BLOB = "model/similarity.pkl"
 
-# Percorsi dei file
-DATA_PATH = Path("/app/data/recsys_df.csv")
-MODEL_PATH = Path("/app/model/similarity.pkl")
+app = FastAPI(title="🎬 Movie Recommendation API", version="1.0.0")
 
-# Caricamento dei file
-logging.info("Caricamento del dataset e della matrice di similarità")
+# === Google Cloud Storage Setup ===
+@lru_cache()
+def get_gcs_bucket():
+    try:
+        client = storage.Client.from_service_account_json(GCS_KEY_PATH)
+        return client.bucket(BUCKET_NAME)
+    except Exception as e:
+        logging.error(f"Errore inizializzazione client GCS: {e}")
+        raise RuntimeError("Impossibile inizializzare il client GCS")
 
-if not DATA_PATH.exists() or not MODEL_PATH.exists():
-    logging.error("Errore: Dataset o modello non trovati. Verifica i percorsi.")
-    raise RuntimeError("Dataset o modello non trovati!")
+# === Caricamento dati e modello con cache ===
+@lru_cache()
+def load_data():
+    bucket = get_gcs_bucket()
+    try:
+        logging.info("📦 Caricamento dataset da GCS")
+        data_blob = bucket.blob(DATA_BLOB)
+        df_bytes = data_blob.download_as_bytes()
+        df = pd.read_csv(io.BytesIO(df_bytes))
+        df['title_lower'] = df['title'].str.lower()
+        return df
+    except Exception as e:
+        logging.error(f"❌ Errore nel caricamento del dataset: {e}")
+        raise RuntimeError("Errore nel caricamento del dataset")
 
-movies = pd.read_csv(DATA_PATH)
-similarity = pickle.load(open(MODEL_PATH, "rb"))
+@lru_cache()
+def load_model():
+    bucket = get_gcs_bucket()
+    try:
+        logging.info("📦 Caricamento matrice di similarità da GCS")
+        model_blob = bucket.blob(MODEL_BLOB)
+        model_bytes = model_blob.download_as_bytes()
+        return pickle.loads(model_bytes)
+    except Exception as e:
+        logging.error(f"❌ Errore nel caricamento del modello: {e}")
+        raise RuntimeError("Errore nel caricamento del modello")
 
-# Normalizziamo i titoli per evitare problemi di matching
-movies['title_lower'] = movies['title'].str.lower()
-movie_title_map = {title.lower(): title for title in movies['title'].values}  # Mappatura case-insensitive
-
+# === Schema per richieste POST ===
 class MovieRequest(BaseModel):
     movie_name: str
 
+# === Funzione di raccomandazione ===
 def recommend(movie: str):
-    movie_lower = movie.lower()
-    
+    movies = load_data()
+    similarity = load_model()
+
+    movie_lower = movie.strip().lower()
+    movie_title_map = {title.lower(): title for title in movies['title'].values}
+
     if movie_lower not in movie_title_map:
-        raise HTTPException(status_code=404, detail="Movie not found")
+        raise HTTPException(status_code=404, detail="🎥 Film non trovato nel dataset.")
 
-    actual_movie_name = movie_title_map[movie_lower]
-    index = movies[movies['title'] == actual_movie_name].index[0]
-    distances = sorted(list(enumerate(similarity[index])), reverse=True, key=lambda x: x[1])
-    recommended_movie_names = [movies.iloc[i[0]].title for i in distances[1:6]]
+    actual_title = movie_title_map[movie_lower]
+    idx = movies[movies['title'] == actual_title].index[0]
 
-    return {"recommendations": recommended_movie_names}
+    distances = sorted(enumerate(similarity[idx]), key=lambda x: x[1], reverse=True)
+    recommended = [movies.iloc[i[0]].title for i in distances[1:6]]  # Salta se stesso
 
-@app.get("/")
+    return {
+        "input_movie": actual_title,
+        "recommendations": recommended
+    }
+
+# === Endpoints ===
+@app.get("/", tags=["Info"])
 def root():
-    return {"message": "Recommendation API is running Now!"}
+    return {"message": "🚀 Recommendation API is running!"}
 
-@app.get("/recommend/{movie_name}")
+@app.get("/healthz", tags=["Monitoring"])
+def health_check():
+    try:
+        load_data()
+        load_model()
+        return {"status": "ok"}
+    except:
+        raise HTTPException(status_code=500, detail="API non pronta")
+
+@app.get("/recommend/{movie_name}", tags=["Recommend"])
 def get_recommendations(movie_name: str):
     return recommend(movie_name)
 
-@app.post("/recommend")
+@app.post("/recommend", tags=["Recommend"])
 def recommend_movie(request: MovieRequest):
     return recommend(request.movie_name)
