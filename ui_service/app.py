@@ -30,7 +30,7 @@ def load_movies_from_gcs():
 # === Funzione per ottenere raccomandazioni dall’API ===
 def get_recommendations(movie_title: str):
     try:
-        response = requests.post(API_URL, json={"movie_name": movie_title}, timeout=10)
+        response = requests.post(API_URL, json={"movie_name": movie_title}, timeout=30)
         response.raise_for_status() # Controlla se la risposta è OK
         return response.json()["recommendations"]
     except requests.exceptions.RequestException as e:
@@ -63,3 +63,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+
+    
+    
+    
