@@ -1,9 +1,9 @@
 import pandas as pd
-import numpy as np
 import pickle
 import logging
 import tempfile
 import os
+import gzip
 
 from google.cloud import storage
 from sklearn.feature_extraction.text import CountVectorizer
@@ -54,8 +54,9 @@ def upload_to_gcs(bucket, data, destination_blob):
     tmp_file_path = None
 
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pkl') as tmp_file:
-            pickle.dump(data, tmp_file)
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pkl.gz') as tmp_file:
+            with gzip.GzipFile(fileobj=tmp_file, mode='wb') as f_out:
+                pickle.dump(data, f_out)
             tmp_file_path = tmp_file.name
 
         blob = bucket.blob(destination_blob)
@@ -67,10 +68,10 @@ def upload_to_gcs(bucket, data, destination_blob):
             timeout=600 # Timeout aumentato a 10 minuti
         )
 
-        logging.info(f"✅ Matrice salvata con successo in gs://{BUCKET_NAME}/{destination_blob}")
+        logging.info(f" Matrice salvata con successo in gs://{BUCKET_NAME}/{destination_blob}")
 
     except Exception as e:
-        logging.error(f"❌ Errore durante il salvataggio della matrice: {e}")
+        logging.error(f" Errore durante il salvataggio della matrice: {e}")
         raise
 
     finally:

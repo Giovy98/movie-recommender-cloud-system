@@ -1,7 +1,6 @@
 import pandas as pd
 import ast
 import logging
-import os
 import gcsfs  # Importante per autenticazione esplicita con gcsfs
 
 # Path al file di credenziali del Service Account (montato dal Secret)

@@ -1,7 +1,8 @@
+from google.cloud import storage
+
 import streamlit as st
 import requests
 import pandas as pd
-from google.cloud import storage
 import io
 import os
 

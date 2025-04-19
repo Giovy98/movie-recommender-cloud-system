@@ -1,12 +1,14 @@
 from fastapi import FastAPI, HTTPException
+from functools import lru_cache
+from pydantic import BaseModel
+from google.cloud import storage
+
 import pickle
 import pandas as pd
 import logging
-from pydantic import BaseModel
-from google.cloud import storage
 import io
-from functools import lru_cache
 import os
+import gzip
 
 # Configurazione logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -52,7 +54,9 @@ def load_model():
         logging.info("Caricamento matrice di similarità da GCS")
         model_blob = bucket.blob(MODEL_BLOB)
         model_bytes = model_blob.download_as_bytes()
-        return pickle.loads(model_bytes)
+        
+        with gzip.GzipFile(fileobj=io.BytesIO(model_bytes), mode='rb') as f:
+           return pickle.load(f)
     except Exception as e:
         logging.error(f"Errore nel caricamento del modello: {e}")
         raise RuntimeError("Errore nel caricamento del modello")
