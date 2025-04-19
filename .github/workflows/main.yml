@@ -1,4 +1,4 @@
-name: GCP CI/CD Controller
+name: GCP CI/CD Controllers
 
 on:
   workflow_dispatch:
