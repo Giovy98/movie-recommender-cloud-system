@@ -5,6 +5,7 @@ on:
     branches: [ cloud-provider-testing ]
   workflow_dispatch:  # Per attivare manualmente il workflow
   
+
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   TF_VERSION: '1.5.0'
@@ -30,22 +31,6 @@ jobs:
       uses: google-github-actions/auth@v1
       with:
         credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v1
-      with:
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
-  
-    - name: Verifica se lo stato Terraform esiste già
-      id: check_state
-      run: |
-        if gsutil -q stat gs://${{ secrets.GCP_BUCKET_NAME_TERRAFORM }}/terraform.tfstate 2>/dev/null; then
-          echo "terraform_state_exists=true" >> $GITHUB_OUTPUT
-          echo "Stato Terraform esistente rilevato nel bucket"
-        else
-          echo "terraform_state_exists=false" >> $GITHUB_OUTPUT
-          echo "Nessuno stato Terraform trovato nel bucket, verrà creata una nuova infrastruttura"
-        fi
   
     - name: Crea il file terraform.tfvars
       working-directory: ${{ env.WORKING_DIR }}
@@ -73,48 +58,15 @@ jobs:
     - name: Terraform validate
       working-directory: ${{ env.WORKING_DIR }}
       run: terraform validate    
-
-    - name: Lista risorse esistenti nello stato
-      if: steps.check_state.outputs.terraform_state_exists == 'true'
-      working-directory: ${{ env.WORKING_DIR }}
-      run: |
-        echo "Risorse Terraform attualmente presenti nello stato:"
-        terraform state list || echo "Errore nel recupero delle risorse dallo stato"
       
     - name: Terraform plan
       working-directory: ${{ env.WORKING_DIR }}
-      run: terraform plan -no-color -out=tfplan
-    
-    - name: Check if infrastructure changes are needed
-      id: tfcheck
-      working-directory: ${{ env.WORKING_DIR }}
-      run: |
-        terraform show -no-color tfplan > tfplan.txt
-        if grep -q "No changes. Infrastructure is up-to-date." tfplan.txt; then
-          echo "apply_needed=false" >> $GITHUB_OUTPUT
-          echo "L'infrastruttura è già aggiornata, nessuna modifica necessaria"
-        else
-          echo "apply_needed=true" >> $GITHUB_OUTPUT
-          echo "Sono necessarie modifiche all'infrastruttura"
-          grep -A 5 "Plan:" tfplan.txt || echo "Dettagli del piano non disponibili"
-        fi
+      run: terraform plan -no-color
       
     - name: Terraform apply
-      if: steps.tfcheck.outputs.apply_needed == 'true'
       working-directory: ${{ env.WORKING_DIR }}
-      run: terraform apply -auto-approve tfplan
-
-    - name: Log stato finale infrastruttura
-      working-directory: ${{ env.WORKING_DIR }}
-      run: |
-        if [ "${{ steps.tfcheck.outputs.apply_needed }}" == "true" ]; then
-          echo "Infrastruttura creata o modificata con successo"
-        else
-          echo "Infrastruttura già esistente, nessuna modifica applicata"
-        fi
-        echo "Elenco risorse attualmente disponibili:"
-        terraform state list || echo "Errore nel recupero delle risorse dallo stato"
-
+      run: terraform apply -auto-approve
+    
     - name: Rimuovi service key
       if: always()
       working-directory: ${{ env.WORKING_DIR }}
@@ -129,6 +81,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
+    # Autenticazione con Google Cloud (approccio aggiornato)
     - name: Google Auth
       id: auth
       uses: google-github-actions/auth@v1
@@ -140,30 +93,14 @@ jobs:
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-    - name: Verifica esistenza bucket
-      id: check_bucket
-      run: |
-        if gsutil -q stat gs://${{ secrets.GCP_BUCKET_NAME_TERRAFORM }} 2>/dev/null; then
-          echo "bucket_exists=true" >> $GITHUB_OUTPUT
-          echo "Il bucket ${{ secrets.GCP_BUCKET_NAME_TERRAFORM }} esiste"
-        else
-          echo "bucket_exists=false" >> $GITHUB_OUTPUT
-          echo "ATTENZIONE: Il bucket ${{ secrets.GCP_BUCKET_NAME_TERRAFORM }} non esiste!"
-        fi
-
+    # Carica i dati dalla cartella locale al bucket Google Cloud
     - name: Carica dati sul bucket Google Cloud Storage
-      if: steps.check_bucket.outputs.bucket_exists == 'true'
       run: |
         echo "Contenuto della cartella data:"
         ls -la ./data/
         gsutil -m cp -r ./data/* gs://${{ secrets.GCP_BUCKET_NAME_TERRAFORM }}/raw
         echo "Dati caricati con successo su gs://${{ secrets.GCP_BUCKET_NAME_TERRAFORM }}/raw"
 
-    - name: Fallback se il bucket non esiste
-      if: steps.check_bucket.outputs.bucket_exists == 'false'
-      run: |
-        echo "ERRORE: Impossibile caricare i dati perché il bucket non esiste"
-        exit 1
 
   build-and-push-images:
     name: Build e Push Docker Images
@@ -178,6 +115,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
+    # Autenticazione con Google Cloud (approccio aggiornato)
     - name: Google Auth
       id: auth
       uses: google-github-actions/auth@v1
@@ -189,40 +127,21 @@ jobs:
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-    - name: Verifica esistenza repository Artifact Registry
-      id: check_repository
-      run: |
-        if gcloud artifacts repositories describe ${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }} \
-          --location=${{ secrets.GCP_REGION }} \
-          --project=${{ secrets.GCP_PROJECT_ID }} 2>/dev/null; then
-          echo "repository_exists=true" >> $GITHUB_OUTPUT
-          echo "Repository Artifact Registry ${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }} esiste"
-        else
-          echo "repository_exists=false" >> $GITHUB_OUTPUT
-          echo "ATTENZIONE: Repository Artifact Registry ${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }} non esiste!"
-        fi
-
+    # Configurazione Docker per l'autenticazione con Artifact Registry
     - name: Configura Docker per Artifact Registry
-      if: steps.check_repository.outputs.repository_exists == 'true'
       run: |
         gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
 
+    # Costruzione dell'immagine Docker per ogni servizio
     - name: Build immagine Docker per ${{ matrix.service }}
-      if: steps.check_repository.outputs.repository_exists == 'true'
       run: |
         echo "Building Docker image per ${{ matrix.service }}"
         cd ${{ matrix.service }}
         docker build -t ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:${{ github.sha }} .
         docker tag ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:${{ github.sha }} ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:latest
 
+    # Push dell'immagine su Artifact Registry
     - name: Push immagine ${{ matrix.service }} su Artifact Registry
-      if: steps.check_repository.outputs.repository_exists == 'true'
       run: |
         docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:${{ github.sha }}
         docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:latest
-
-    - name: Fallback se il repository non esiste
-      if: steps.check_repository.outputs.repository_exists == 'false'
-      run: |
-        echo "ERRORE: Impossibile effettuare push delle immagini perché il repository Artifact Registry non esiste"
-        exit 1
