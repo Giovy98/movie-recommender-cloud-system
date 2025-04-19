@@ -1,4 +1,4 @@
-# 4-outputs.tf
+# 5-outputs.tf
 # File di output per il bucket GCS e le cartelle create
 
 # -------------------------------------------------------
