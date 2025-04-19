@@ -1,4 +1,4 @@
-name: CI/Cd Pipeline for Google Cloud Provider 
+name: CI/CD Pipeline for Google Cloud Provider 
 
 on:
   push:
