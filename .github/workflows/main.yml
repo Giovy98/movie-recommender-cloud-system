@@ -51,7 +51,7 @@ jobs:
       
     - name: Terraform format
       working-directory: ${{ env.WORKING_DIR }}
-      run: terraform fmt -check 
+      run: terraform fmt -recursive 
       
     - name: Terraform validate
       working-directory: ${{ env.WORKING_DIR }}
@@ -96,8 +96,8 @@ jobs:
       run: |
         echo "Contenuto della cartella data:"
         ls -la ./data/
-        gsutil -m cp -r ./data/* gs://${{ secrets.GCP_BUCKET_NAME }}/raw
-        echo "Dati caricati con successo su gs://${{ secrets.GCP_BUCKET_NAME }}/raw"
+        gsutil -m cp -r ./data/* gs://${{ secrets.GCP_BUCKET_NAME_TERRAFORM }}/raw
+        echo "Dati caricati con successo su gs://${{ secrets.GCP_BUCKET_NAME_TERRAFORM }}/raw"
 
 
   build-and-push-images:
