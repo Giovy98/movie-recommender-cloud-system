@@ -4,7 +4,5 @@ locals {
   apis = [                              # api utilizzate
     "storage-component.googleapis.com", # per il bucket
     "artifactregistry.googleapis.com",  # per il registry
-    "iamcredentials.googleapis.com",     # per il service account
-    "serviceusage.googleapis.com ",      # per l'abilitazione delle api
   ]
 }
