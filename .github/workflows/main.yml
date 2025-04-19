@@ -1,0 +1,106 @@
+name: GCP CI/CD Controller
+
+on:
+  workflow_dispatch:
+    inputs:
+      azione:
+        description: 'Cosa vuoi fare?'
+        required: true
+        type: choice
+        default: 'deploy'
+        options:
+          - crea-infrastruttura
+          - deploy
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  TF_VERSION: '1.5.0'
+  WORKING_DIR: './terraform-gcp'
+
+jobs:
+  provision-infrastructure:
+    name: Provision GCP Infrastructure
+    runs-on: ubuntu-latest
+    if: github.event.inputs.azione == 'crea-infrastruttura'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+        terraform_wrapper: false
+
+    - name: Google Auth
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Crea terraform.tfvars
+      working-directory: ${{ env.WORKING_DIR }}
+      run: |
+        cat > terraform.tfvars <<EOF
+        project_id           = "${{ secrets.GCP_PROJECT_ID }}"
+        region               = "${{ secrets.GCP_REGION }}"
+        credentials_file     = "sa-key.json"
+        bucket_name          = "${{ secrets.GCP_BUCKET_NAME_TERRAFORM }}"
+        artifact_repository  = "${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}"
+        EOF
+
+    - name: Salva service key
+      working-directory: ${{ env.WORKING_DIR }}
+      run: echo '${{ secrets.GCP_SA_KEY }}' > sa-key.json
+
+    - name: Terraform init & apply
+      working-directory: ${{ env.WORKING_DIR }}
+      run: |
+        terraform init
+        terraform plan -out=tfplan
+        terraform apply -auto-approve tfplan
+
+    - name: Rimuovi service key
+      if: always()
+      working-directory: ${{ env.WORKING_DIR }}
+      run: rm -f sa-key.json
+
+  deploy:
+    name: Upload Data + Build & Push Docker Images
+    runs-on: ubuntu-latest
+    if: github.event.inputs.azione == 'deploy'
+
+    strategy:
+      matrix:
+        service: [api_service, preprocessing_service, recommender_service, ui_service]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Google Auth
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Upload data to GCS
+      run: |
+        echo "Uploading data to gs://${{ secrets.GCP_BUCKET_NAME_TERRAFORM }}/raw"
+        gsutil -m cp -r ./data/* gs://${{ secrets.GCP_BUCKET_NAME_TERRAFORM }}/raw
+
+    - name: Configura Docker per Artifact Registry
+      run: |
+        gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
+
+    - name: Build e Push Docker image per ${{ matrix.service }}
+      run: |
+        cd ${{ matrix.service }}
+        docker build -t ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:${{ github.sha }} .
+        docker tag ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:${{ github.sha }} ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:latest
+        docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:${{ github.sha }}
+        docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:latest
