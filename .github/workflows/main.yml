@@ -24,12 +24,14 @@ jobs:
       uses: hashicorp/setup-terraform@v2
       with:
         terraform_version: ${{ env.TF_VERSION }}
+        terraform_wrapper: false
       
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v1
+    - name: Google Auth
+      id: auth
+      uses: google-github-actions/auth@v1
       with:
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
-
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+  
     - name: Crea il file terraform.tfvars
       working-directory: ${{ env.WORKING_DIR }}
       run: |
@@ -37,7 +39,7 @@ jobs:
         project_id           = "${{ secrets.GCP_PROJECT_ID }}"
         region               = "${{ secrets.GCP_REGION }}"
         credentials_file     = "sa-key.json"
-        bucket_name          = "${{ secrets.GCP_BUCKET_NAME }}"
+        bucket_name          = "${{ secrets.GCP_BUCKET_NAME_TERRAFORM }}"
         artifact_repository  = "${{ secrets.ARTIFACT_REPOSITORY }}"
         EOF
     
@@ -51,7 +53,7 @@ jobs:
       
     - name: Terraform format
       working-directory: ${{ env.WORKING_DIR }}
-      run: terraform fmt -recursive 
+      run: terraform fmt -check -recursive 
       
     - name: Terraform validate
       working-directory: ${{ env.WORKING_DIR }}
@@ -63,7 +65,7 @@ jobs:
       
     - name: Terraform apply
       working-directory: ${{ env.WORKING_DIR }}
-      run: terraform apply -auto-approve -no-color | tee apply.log
+      run: terraform apply -auto-approve
     
     - name: Rimuovi service key
       if: always()
