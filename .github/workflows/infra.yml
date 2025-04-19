@@ -1,0 +1,74 @@
+name: GCP Infrastructure Provisioning
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'terraform-gcp/**'
+      - '.github/workflows/infra.yml'
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  TF_VERSION: '1.5.0'
+  WORKING_DIR: './terraform-gcp'
+  
+jobs:
+  provision-infrastructure:
+    name: Provision GCP Infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+        terraform_wrapper: false
+      
+    - name: Google Auth
+      id: auth
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+  
+    - name: Crea il file terraform.tfvars
+      working-directory: ${{ env.WORKING_DIR }}
+      run: |
+        cat > terraform.tfvars << EOF
+        project_id           = "${{ secrets.GCP_PROJECT_ID }}"
+        region               = "${{ secrets.GCP_REGION }}"
+        credentials_file     = "sa-key.json"
+        bucket_name          = "${{ secrets.GCP_BUCKET_NAME_TERRAFORM }}"
+        artifact_repository  = "${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}"
+        EOF
+    
+    - name: Salva service key
+      working-directory: ${{ env.WORKING_DIR }}
+      run: echo '${{ secrets.GCP_SA_KEY }}' > sa-key.json
+    
+    - name: Terraform init
+      working-directory: ${{ env.WORKING_DIR }}
+      run: terraform init    
+      
+    - name: Terraform format
+      working-directory: ${{ env.WORKING_DIR }}
+      run: terraform fmt -recursive 
+      
+    - name: Terraform validate
+      working-directory: ${{ env.WORKING_DIR }}
+      run: terraform validate    
+      
+    - name: Terraform plan
+      working-directory: ${{ env.WORKING_DIR }}
+      run: terraform plan -no-color
+      
+    - name: Terraform apply
+      working-directory: ${{ env.WORKING_DIR }}
+      run: terraform apply -auto-approve
+    
+    - name: Rimuovi service key
+      if: always()
+      working-directory: ${{ env.WORKING_DIR }}
+      run: rm -f sa-key.json
