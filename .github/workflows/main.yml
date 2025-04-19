@@ -1,4 +1,4 @@
-name: Carica dati e pubblica immagini Docker
+name: CI/Cd Pipeline for Google Cloud Provider 
 
 on:
   push:
