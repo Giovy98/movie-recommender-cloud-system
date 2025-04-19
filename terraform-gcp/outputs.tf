@@ -1,7 +1,3 @@
-# 5-outputs.tf
-# File di output per il bucket GCS e le cartelle create
-
-# -------------------------------------------------------
 output "bucket_name" {
   description = "Nome del bucket creato"
   value       = google_storage_bucket.data_bucket.name
@@ -27,9 +23,6 @@ output "model_folder_path" {
   value       = "gs://${google_storage_bucket.data_bucket.name}/${google_storage_bucket_object.model_folder.name}"
 }
 
-# -------------------------------------------------------
-
-# Repository Docker
 output "docker_repo_name" {
   description = "Nome del repository Docker creato"
   value       = google_artifact_registry_repository.docker_repo.name
