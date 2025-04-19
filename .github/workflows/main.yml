@@ -40,7 +40,7 @@ jobs:
         region               = "${{ secrets.GCP_REGION }}"
         credentials_file     = "sa-key.json"
         bucket_name          = "${{ secrets.GCP_BUCKET_NAME_TERRAFORM }}"
-        artifact_repository  = "${{ secrets.ARTIFACT_REPOSITORY }}"
+        artifact_repository  = "${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}"
         EOF
     
     - name: Salva service key
@@ -137,11 +137,11 @@ jobs:
       run: |
         echo "Building Docker image per ${{ matrix.service }}"
         cd ${{ matrix.service }}
-        docker build -t ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:${{ github.sha }} .
-        docker tag ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:${{ github.sha }} ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:latest
+        docker build -t ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:${{ github.sha }} .
+        docker tag ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:${{ github.sha }} ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:latest
 
     # Push dell'immagine su Artifact Registry
     - name: Push immagine ${{ matrix.service }} su Artifact Registry
       run: |
-        docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:${{ github.sha }}
-        docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:latest
+        docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:${{ github.sha }}
+        docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:latest
