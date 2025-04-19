@@ -157,3 +157,6 @@ jobs:
       run: |
         docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:${{ github.sha }}
         docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:latest
+
+
+  # FINE
