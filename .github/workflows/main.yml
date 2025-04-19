@@ -2,7 +2,7 @@ name: CI/Cd Pipeline for Google Cloud Provider
 
 on:
   push:
-    branches: [ cloud-provider-testing]
+    branches: [ cloud-provider-testing ]
   workflow_dispatch:  # Per attivare manualmente il workflow
   
 
@@ -53,7 +53,7 @@ jobs:
       working-directory: ${{ env.WORKING_DIR }}
       run: terraform fmt -check 
       
-    - name: Terraform Validate
+    - name: Terraform validate
       working-directory: ${{ env.WORKING_DIR }}
       run: terraform validate    
       
