@@ -2,7 +2,7 @@ name: Carica dati e pubblica immagini Docker
 
 on:
   push:
-    branches: [ cloud-provider ]
+    branches: [ cloud-provider-testing]
   workflow_dispatch:  # Per attivare manualmente il workflow
 
 env:
