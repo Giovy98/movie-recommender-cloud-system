@@ -6,7 +6,7 @@ resource "google_project_service" "api" {
 
 resource "google_storage_bucket" "data_bucket" {
   depends_on                  = [google_project_service.api]
-  name                        = var.bucket_name
+  name                        = "dataset_sistema_raccomandazione"
   location                    = local.region
   force_destroy               = true
   uniform_bucket_level_access = true
@@ -35,7 +35,7 @@ resource "google_storage_bucket_object" "model_folder" {
 }
 
 resource "google_artifact_registry_repository" "docker_repo" {
-  repository_id = var.docker_repo_name
+  repository_id = "docker-repository"
   location      = "us-west1"
   format        = "DOCKER"
   description   = "Repository per immagini Docker creata tramite Terraform"
