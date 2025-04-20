@@ -39,8 +39,8 @@ jobs:
     - name: Upload data to GCS
       run: |
         echo "Contenuto della cartella data:"
-        ls -la ./data/
-        gsutil -m cp -r ./data/* gs://${{ secrets.GCP_BUCKET_NAME }}/raw  
+        ls -la data/*
+        gsutil -m cp -r data/*.csv gs://${{ secrets.GCP_BUCKET_NAME }}/raw  
         echo "Dati caricati con successo su gs://${{ secrets.GCP_BUCKET_NAME }}/raw"
 
 
