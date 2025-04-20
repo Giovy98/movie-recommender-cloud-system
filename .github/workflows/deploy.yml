@@ -39,8 +39,8 @@ jobs:
       run: |
         echo "Contenuto della cartella data:"
         ls -la ./data/
-        gsutil -m cp -r ./data/* gs://${{ secrets.GCP_BUCKET_NAME_TERRAFORM }}/raw
-        echo "Dati caricati con successo su gs://${{ secrets.GCP_BUCKET_NAME_TERRAFORM }}/raw"
+        gsutil -m cp -r ./data/* gs://${{ secrets.GCP_BUCKET_NAME }}/raw
+        echo "Dati caricati con successo su gs://${{ secrets.GCP_BUCKET_NAME }}/raw"
 
 
   build-push-images:
@@ -74,7 +74,7 @@ jobs:
       run: |
         echo "Building Docker image per ${{ matrix.service }}"
         cd ${{ matrix.service }}
-        docker build -t ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:${{ github.sha }} .
-        docker tag ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:${{ github.sha }} ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:latest
-        docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:${{ github.sha }}
-        docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}/${{ matrix.service }}:latest
+        docker build -t ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:${{ github.sha }} .
+        docker tag ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:${{ github.sha }} ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:latest
+        docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:${{ github.sha }}
+        docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:latest

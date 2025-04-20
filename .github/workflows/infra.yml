@@ -40,8 +40,8 @@ jobs:
         project_id           = "${{ secrets.GCP_PROJECT_ID }}"
         region               = "${{ secrets.GCP_REGION }}"
         credentials_file     = "sa-key.json"
-        bucket_name          = "${{ secrets.GCP_BUCKET_NAME_TERRAFORM }}"
-        artifact_repository  = "${{ secrets.ARTIFACT_REPOSITORY_TERRAFORM }}"
+        bucket_name          = "${{ secrets.GCP_BUCKET_NAME }}"
+        artifact_repository  = "${{ secrets.ARTIFACT_REPOSITORY }}"
         EOF
     
     - name: Salva service key
