@@ -15,6 +15,9 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  BUCKET_NAME: ${{ secrets.GCP_BUCKET_NAME }}
+  REGION: ${{ secrets.GCP_REGION }}
+  REPOSITORY: ${{ secrets.ARTIFACT_REPOSITORY }}
 
 jobs:
   upload-data:
@@ -25,23 +28,25 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Google Auth
+    - name: Authenticate with Google Cloud
       uses: google-github-actions/auth@v1
       with:
         credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-    - name: Set up gcloud
+    - name: Set up gcloud SDK
       uses: google-github-actions/setup-gcloud@v1
       with:
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        project_id: ${{ env.PROJECT_ID }}
 
-    # Modify 
-    - name: Upload data to GCS
+    - name: Upload CSV files to GCS
       run: |
+        set -e
         echo "Contenuto della cartella data:"
-        ls -la data/*
-        gsutil -m cp -r data/*.csv gs://${{ secrets.GCP_BUCKET_NAME }}/raw  
-        echo "Dati caricati con successo su gs://${{ secrets.GCP_BUCKET_NAME }}/raw"
+        ls -laR data/
+
+        echo "Caricamento file CSV su gs://${BUCKET_NAME}/raw/"
+        gsutil -m cp -r $(find data/ -name '*.csv') gs://${BUCKET_NAME}/raw/
+        echo "Upload completato."
 
 
   build-push-images:
@@ -57,25 +62,32 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v3
 
-    - name: Google Auth
+    - name: Authenticate with Google Cloud
       uses: google-github-actions/auth@v1
       with:
         credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-    - name: Set up Cloud SDK
+    - name: Set up gcloud SDK
       uses: google-github-actions/setup-gcloud@v1
       with:
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        project_id: ${{ env.PROJECT_ID }}
 
-    - name: Configura Docker per Artifact Registry
+    - name: Configure Docker for Artifact Registry
       run: |
-        gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
+        gcloud auth configure-docker ${REGION}-docker.pkg.dev --quiet
 
-    - name: Build e push image per ${{ matrix.service }}
+    - name: Build and Push Docker Image for ${{ matrix.service }}
       run: |
-        echo "Building Docker image per ${{ matrix.service }}"
+        set -e
+        IMAGE_NAME=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/${{ matrix.service }}
+        
+        echo "Building image: $IMAGE_NAME"
         cd ${{ matrix.service }}
-        docker build -t ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:${{ github.sha }} .
-        docker tag ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:${{ github.sha }} ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:latest
-        docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:${{ github.sha }}
-        docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:latest
+        docker build -t $IMAGE_NAME:${{ github.sha }} .
+        docker tag $IMAGE_NAME:${{ github.sha }} $IMAGE_NAME:latest
+
+        echo "Pushing images to Artifact Registry"
+        docker push $IMAGE_NAME:${{ github.sha }}
+        docker push $IMAGE_NAME:latest
+
+        echo "✅ Build & Push completato per ${{ matrix.service }}"
