@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - cloud-provider-testing
+      - cloud-provider-testing-feature
     paths:
       - 'data/**'
       - 'api_service/**'
