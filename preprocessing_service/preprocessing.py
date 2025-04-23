@@ -1,21 +1,33 @@
 import pandas as pd
 import ast
 import logging
-import gcsfs  # Importante per autenticazione esplicita con gcsfs
+import os
+import tempfile
 
-# Path al file di credenziali del Service Account (montato dal Secret)
-GCS_KEY_PATH = "/var/secrets/key.json"
+from google.cloud import storage
 
-# Configurazione logging
+# Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Bucket e path
-BUCKET_NAME = 'dataset_sistema_raccomandazione'
-RAW_PATH = f'gs://{BUCKET_NAME}/raw/'
-PROCESSED_PATH = f'gs://{BUCKET_NAME}/processed/'
+# === Variabili d'Ambiente ===
+GCS_KEY_PATH = "/var/secrets/key.json"
+BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
+MOVIES_BLOB = os.getenv("GCS_RAW_MOVIES_BLOB")
+CREDITS_BLOB = os.getenv("GCS_RAW_CREDITS_BLOB")
+PROCESSED_BLOB = os.getenv("GCS_PROCESSED_BLOB")
 
-# Inizializza GCS filesystem con credenziali
-gcs = gcsfs.GCSFileSystem(token=GCS_KEY_PATH)
+# === Funzioni utili ===
+def init_gcs_client():
+    return storage.Client.from_service_account_json(GCS_KEY_PATH)
+
+def download_csv_to_df(bucket, blob_name):
+    try:
+        blob = bucket.blob(blob_name)
+        df_bytes = blob.download_as_bytes()
+        return pd.read_csv(pd.io.common.BytesIO(df_bytes))
+    except Exception as e:
+        logging.error(f"Errore nel download di {blob_name}: {e}")
+        raise
 
 def extract_names(text, limit=None, key='name'):
     try:
@@ -36,28 +48,22 @@ def extract_director(text):
         return []
 
 def preprocessing():
+    logging.info("==== INIZIO PREPROCESSING ====")
+
+    storage_client = init_gcs_client()
+    bucket = storage_client.bucket(BUCKET_NAME)
+
     logging.info("1°: Caricamento Dataset dal bucket GCS")
-
-    movies_path = RAW_PATH + 'tmdb_5000_movies.csv'
-    credits_path = RAW_PATH + 'tmdb_5000_credits.csv'
-
-    try:
-        movies = pd.read_csv(movies_path, storage_options={"token": GCS_KEY_PATH})
-        credits = pd.read_csv(credits_path, storage_options={"token": GCS_KEY_PATH})
-    except Exception as e:
-        logging.error(f"Errore nel caricamento dei file da GCS: {e}")
-        return
+    movies = download_csv_to_df(bucket, MOVIES_BLOB)
+    credits = download_csv_to_df(bucket, CREDITS_BLOB)
 
     logging.info("2°: Merging dei due dataset")
     movies_full = movies.merge(credits, on='title')
 
-    logging.info("3°: Selezione delle colonne di interesse")
+    logging.info("3°: Pulizia e trasformazione dati")
     movies_full = movies_full[['movie_id', 'title', 'overview', 'genres', 'keywords', 'cast', 'crew']]
-
-    logging.info("4°: Rimozione valori nulli")
     movies_full.dropna(inplace=True)
 
-    logging.info("5°: Applicazione delle trasformazioni")
     movies_full['genres'] = movies_full['genres'].apply(extract_names)
     movies_full['keywords'] = movies_full['keywords'].apply(extract_names)
     movies_full['cast'] = movies_full['cast'].apply(lambda x: extract_names(x, limit=3))
@@ -65,21 +71,26 @@ def preprocessing():
     movies_full.drop(columns=['crew'], inplace=True)
 
     movies_full['overview'] = movies_full['overview'].apply(lambda x: x.lower().split() if isinstance(x, str) else [])
-
-    logging.info("6°: Creazione della feature combinata 'tags'")
     movies_full['tags'] = movies_full['overview'] + movies_full['genres'] + movies_full['keywords'] + movies_full['cast'] + movies_full['director']
     movies_full['tags'] = movies_full['tags'].apply(lambda x: " ".join(x))
 
     recsys_df = movies_full[['movie_id', 'title', 'tags']]
 
-    logging.info("7°: Salvataggio del dataframe finale sul bucket GCS")
-    output_path = PROCESSED_PATH + 'recsys_df.csv'
+    logging.info("4°: Scrittura su GCS del dataset processato")
+    tmp_file_path = tempfile.mktemp(suffix='.csv')
+    recsys_df.to_csv(tmp_file_path, index=False)
+
     try:
-        recsys_df.to_csv(output_path, index=False, storage_options={"token": GCS_KEY_PATH})
+        blob = bucket.blob(PROCESSED_BLOB)
+        blob.upload_from_filename(tmp_file_path)
+        logging.info(f"File processato salvato con successo in gs://{BUCKET_NAME}/{PROCESSED_BLOB}")
     except Exception as e:
-        logging.error(f"Errore nel salvataggio su GCS: {e}")
+        logging.error(f"Errore durante l'upload del file su GCS: {e}")
+        raise
+    finally:
+        os.remove(tmp_file_path)
+
+    logging.info("==== FINE PREPROCESSING ====")
 
 if __name__ == '__main__':
-    logging.info("INIZIO ESECUZIONE")
     preprocessing()
-    logging.info("FINE ESECUZIONE")
