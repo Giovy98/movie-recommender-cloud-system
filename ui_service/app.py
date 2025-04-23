@@ -10,7 +10,7 @@ import os
 API_URL = os.getenv("API_URL")
 GCS_KEY_PATH = "/var/secrets/key.json"  # Percorso al file di credenziali
 BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
-DATA_BLOB = os.getenv("PROCESSED_DATA_BLOB")
+DATA_BLOB = os.getenv("GCS_PROCESSED_BLOB")
 
 # === Funzione per leggere il CSV da GCS ===
 @st.cache_data(show_spinner=False)

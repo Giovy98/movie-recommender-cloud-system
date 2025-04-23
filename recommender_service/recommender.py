@@ -15,8 +15,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 # Costanti
 GCS_KEY_PATH = "/var/secrets/key.json"
 BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
-DATA_BLOB = os.getenv("PROCESSED_DATA_BLOB")
-MODEL_BLOB = os.getenv("MODEL_FILE_BLOB")
+DATA_BLOB = os.getenv("GCS_PROCESSED_BLOB")
+MODEL_BLOB = os.getenv("GCS_MODEL_BLOB")
 
 
 def init_gcs_client():

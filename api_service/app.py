@@ -16,8 +16,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 # Config
 GCS_KEY_PATH = "/var/secrets/key.json"
 BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
-DATA_BLOB = os.getenv("PROCESSED_DATA_BLOB")
-MODEL_BLOB = os.getenv("MODEL_FILE_BLOB")
+DATA_BLOB_PROCESSED = os.getenv("GCS_PROCESSED_BLOB")
+MODEL_BLOB = os.getenv("GCS_MODEL_BLOB")
+
 
 
 app = FastAPI(title="🎬 Movie Recommendation API", version="1.0.0")
@@ -38,7 +39,7 @@ def load_data():
     bucket = get_gcs_bucket()
     try:
         logging.info("Caricamento dataset da GCS")
-        data_blob = bucket.blob(DATA_BLOB)
+        data_blob = bucket.blob(DATA_BLOB_PROCESSED)
         df_bytes = data_blob.download_as_bytes()
         df = pd.read_csv(io.BytesIO(df_bytes))
         df['title_lower'] = df['title'].str.lower()
