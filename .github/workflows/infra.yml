@@ -17,7 +17,6 @@ env:
   TF_VAR_bucket_name: ${{ secrets.GCP_BUCKET_NAME }}
   TF_VAR_artifact_repository: ${{ secrets.ARTIFACT_REPOSITORY }}
 
-
 jobs:
   provision-infrastructure:
     name: Provision GCP Infrastructure
@@ -33,13 +32,17 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
 
+      - name: Set Terraform Cloud credentials
+        run: |
+          mkdir -p ~/.terraform.d
+          echo '{"credentials":{"app.terraform.io":{"token":"${{ secrets.TFC_TOKEN }}"}}}' > ~/.terraform.d/credentials.tfrc.json
+
       - name: Authenticate with GCP
-        id: auth
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Terraform Init (Remote Backend)
+      - name: Terraform Init
         working-directory: ${{ env.WORKING_DIR }}
         run: terraform init -input=false
 
