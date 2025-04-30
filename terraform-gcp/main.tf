@@ -4,34 +4,24 @@ resource "google_project_service" "api" {
   disable_on_destroy = false
 }
 
+
 resource "google_storage_bucket" "data_bucket" {
-  depends_on                  = [google_project_service.api]
   name                        = var.bucket_name
   location                    = local.region
   force_destroy               = true
   uniform_bucket_level_access = true
+  depends_on                  = [google_project_service.api]
 
   versioning {
     enabled = true
   }
 }
 
-resource "google_storage_bucket_object" "raw_folder" {
-  name    = "raw/"
-  bucket  = google_storage_bucket.data_bucket.name
-  content = " "
-}
-
-resource "google_storage_bucket_object" "processed_folder" {
-  name    = "processed/"
-  bucket  = google_storage_bucket.data_bucket.name
-  content = " "
-}
-
-resource "google_storage_bucket_object" "model_folder" {
-  name    = "model/"
-  bucket  = google_storage_bucket.data_bucket.name
-  content = " "
+resource "google_storage_bucket_object" "folders" {
+  for_each = toset(["raw/", "processed/", "model/"])
+  name     = each.key
+  bucket   = google_storage_bucket.data_bucket.name
+  content  = " "
 }
 
 resource "google_artifact_registry_repository" "docker_repo" {
@@ -39,7 +29,7 @@ resource "google_artifact_registry_repository" "docker_repo" {
   location      = local.region
   format        = "DOCKER"
   description   = "Repository per immagini Docker creata tramite Terraform"
-
-  provider   = google
-  depends_on = [google_project_service.api]
+  depends_on    = [google_project_service.api]
 }
+
+

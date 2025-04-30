@@ -17,3 +17,6 @@ variable "region" {
   description = "Regione GCP"
   type        = string
 }
+
+
+  
