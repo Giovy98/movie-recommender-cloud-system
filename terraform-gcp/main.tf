@@ -113,14 +113,31 @@ resource "google_compute_firewall" "allow_iap_ssh" {
   source_ranges = ["35.235.240.0/20"]
 }
 
-resource "google_container_cluster" "gke_cluster" {
-  name     = "gke-cluster"
-  location = local.region
-  network  = google_compute_network.vpc.name
-  subnetwork = google_compute_subnetwork.private.name
-
+resource "google_container_cluster" "gke" {
+  name                     = "testing-cluster"
+  location                 = local.region
   remove_default_node_pool = true
   initial_node_count       = 3
+  network                  = google_compute_network.vpc.self_link
+  subnetwork               = google_compute_subnetwork.private.self_link
+  networking_mode          = "VPC_NATIVE"
+
+  addons_config {
+    http_load_balancing {
+      disabled = true
+    }
+    horizontal_pod_autoscaling {
+      disabled = false
+    }
+  }
+
+  release_channel {
+    channel = "REGULAR"
+  }
+
+  workload_identity_config {
+    workload_pool = "${local.project_id}.svc.id.goog"
+  }
 
   ip_allocation_policy {
     cluster_secondary_range_name  = "k8s-pods"
@@ -130,44 +147,19 @@ resource "google_container_cluster" "gke_cluster" {
   private_cluster_config {
     enable_private_nodes    = true
     enable_private_endpoint = false
-    master_ipv4_cidr_block  = "172.30.0.0/28"
+    master_ipv4_cidr_block  = "192.168.0.0/28"
   }
 
-  master_authorized_networks_config {
-    cidr_blocks {
-      cidr_block   = "0.0.0.0/0"
-      display_name = "all"
-    }
-  }
-
-  depends_on = [
-    google_project_service.api,
-    google_compute_subnetwork.private
-  ]
 }
 
-resource "google_container_node_pool" "primary_nodes" {
-  name       = "primary-node-pool"
-  cluster    = google_container_cluster.gke_cluster.name
-  location   = local.region
+resource "google_service_account" "gke" {
+  account_id = "demo-gke"
+}
 
-  node_config {
-    machine_type = "e2-medium"
-    oauth_scopes = [
-      "https://www.googleapis.com/auth/cloud-platform"
-    ]
-    labels = {
-      env = "dev"
-    }
+resource "google_container_node_pool" "general" {
+  name    = "general"
+  cluster = google_container_cluster.gke.id
 
-    tags = ["gke-node"]
-    metadata = {
-      disable-legacy-endpoints = "true"
-    }
-    service_account = "k8s-accessor@my-project-1531942571796.iam.gserviceaccount.com"
-  }
-
-  initial_node_count = 3
   autoscaling {
     min_node_count = 3
     max_node_count = 6
@@ -178,5 +170,17 @@ resource "google_container_node_pool" "primary_nodes" {
     auto_upgrade = true
   }
 
-  depends_on = [google_container_cluster.gke_cluster]
+  node_config {
+    preemptible  = false
+    machine_type = "e2-medium"
+
+    labels = {
+      role = "general"
+    }
+
+    service_account = google_service_account.gke.email
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform"
+    ]
+  }
 }
