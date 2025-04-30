@@ -17,3 +17,13 @@ variable "region" {
   description = "Regione GCP"
   type        = string
 }
+
+variable "vpc_name" {
+  description = "Nome della VPC"
+  type        = string
+}
+variable "gke_cluster_name" {
+  description = "Nome del cluster GKE"
+  type        = string
+  
+}
