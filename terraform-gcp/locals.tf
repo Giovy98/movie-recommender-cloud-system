@@ -4,6 +4,7 @@ locals {
   apis = [                              # api utilizzate
     "storage-component.googleapis.com", # per il bucket
     "artifactregistry.googleapis.com",  # per il repository
-    "compute.googleapis.com",      # per VPC e subnet
+    "compute.googleapis.com",           # per la  vpc 
+    "container.googleapis.com",         # per il cluster GKE
   ]
 }

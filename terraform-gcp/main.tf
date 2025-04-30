@@ -112,3 +112,70 @@ resource "google_compute_firewall" "allow_iap_ssh" {
 
   source_ranges = ["35.235.240.0/20"]
 }
+
+resource "google_container_cluster" "gke_cluster" {
+  name     = "gke-cluster"
+  location = local.region
+  network  = google_compute_network.vpc.name
+  subnetwork = google_compute_subnetwork.private.name
+
+  remove_default_node_pool = true
+  initial_node_count       = 3
+
+  ip_allocation_policy {
+    cluster_secondary_range_name  = "k8s-pods"
+    services_secondary_range_name = "k8s-services"
+  }
+
+  private_cluster_config {
+    enable_private_nodes    = true
+    enable_private_endpoint = false
+    master_ipv4_cidr_block  = "172.30.0.0/28"
+  }
+
+  master_authorized_networks_config {
+    cidr_blocks {
+      cidr_block   = "0.0.0.0/0"
+      display_name = "all"
+    }
+  }
+
+  depends_on = [
+    google_project_service.api,
+    google_compute_subnetwork.private
+  ]
+}
+
+resource "google_container_node_pool" "primary_nodes" {
+  name       = "primary-node-pool"
+  cluster    = google_container_cluster.gke_cluster.name
+  location   = local.region
+
+  node_config {
+    machine_type = "e2-medium"
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform"
+    ]
+    labels = {
+      env = "dev"
+    }
+
+    tags = ["gke-node"]
+    metadata = {
+      disable-legacy-endpoints = "true"
+    }
+  }
+
+  initial_node_count = 3
+  autoscaling {
+    min_node_count = 3
+    max_node_count = 6
+  }
+
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+
+  depends_on = [google_container_cluster.gke_cluster]
+}
