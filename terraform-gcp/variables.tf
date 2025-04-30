@@ -25,5 +25,5 @@ variable "vpc_name" {
 variable "gke_cluster_name" {
   description = "Nome del cluster GKE"
   type        = string
-  
 }
+  
