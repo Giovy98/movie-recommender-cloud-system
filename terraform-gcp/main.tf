@@ -164,6 +164,7 @@ resource "google_container_node_pool" "primary_nodes" {
     metadata = {
       disable-legacy-endpoints = "true"
     }
+    service_account = "k8s-accessor@my-project-1531942571796.iam.gserviceaccount.com"
   }
 
   initial_node_count = 3
