@@ -75,7 +75,7 @@ resource "google_compute_subnetwork" "private" {
 resource "google_compute_address" "nat" {
   name         = "nat-terraform"
   address_type = "EXTERNAL"
-  network_tier = "Standard"
+  network_tier = "STANDARD"
 
   depends_on = [google_project_service.api]
 }
