@@ -140,7 +140,7 @@ resource "google_container_cluster" "gke_cluster" {
   name     = "gke-cluster"
   location = "us-west1-a"
 
-  remove_default_node_pool = false
+  remove_default_node_pool = true
   initial_node_count       = 3  # Richiesto anche se non usato
 
   network    = google_compute_network.vpc.name
