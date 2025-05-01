@@ -46,7 +46,7 @@ resource "google_container_cluster" "gke_cluster" {
   name     = "gke-cluster"
   location = local.region
 
-  network = google_compute_network.simple_vpc.id
+  network = google_compute_network.vpc.id
 
   remove_default_node_pool = false
   initial_node_count       = 3 # Inizia con un singolo nodo nel pool di default
