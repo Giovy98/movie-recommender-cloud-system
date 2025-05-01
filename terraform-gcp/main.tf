@@ -54,7 +54,7 @@ resource "google_container_cluster" "gke_cluster" {
   ip_allocation_policy {}
 
   depends_on = [
-    google_compute_network.simple_vpc,
+    google_compute_network.vpc,
     google_project_service.api
   ]
 }
