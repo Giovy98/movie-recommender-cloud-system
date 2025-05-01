@@ -85,7 +85,7 @@ resource "google_compute_firewall" "allow_custom" {
 
 resource "google_compute_firewall" "allow_icmp" {
   name    = "gke-vpc-allow-icmp"
-  network = "default"
+  network =  google_compute_network.vpc.name
   priority = 65534
 
   direction = "INGRESS"
@@ -98,7 +98,7 @@ resource "google_compute_firewall" "allow_icmp" {
 
 resource "google_compute_firewall" "allow_ssh" {
   name    = "gke-vpc-allow-ssh"
-  network = "default"
+  network =  google_compute_network.vpc.name
   priority = 65534
 
   direction = "INGRESS"
@@ -112,7 +112,7 @@ resource "google_compute_firewall" "allow_ssh" {
 
 resource "google_compute_firewall" "deny_all_ingress" {
   name    = "gke-vpc-deny-all-ingress"
-  network = "default"
+  network =  google_compute_network.vpc.name
   priority = 65535
 
   direction = "INGRESS"
@@ -125,7 +125,7 @@ resource "google_compute_firewall" "deny_all_ingress" {
 
 resource "google_compute_firewall" "allow_all_egress" {
   name    = "gke-vpc-allow-all-egress"
-  network = "default"
+  network =  google_compute_network.vpc.name
   priority = 65535
 
   direction = "EGRESS"
