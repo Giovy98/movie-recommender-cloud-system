@@ -71,7 +71,7 @@ resource "google_compute_subnetwork" "private" {
 resource "google_compute_route" "default_route" {
   name             = "default-route"
   dest_range       = "0.0.0.0/0"
-  network          = google_compute_network.vpc_network.id
+  network          = google_compute_network.vpc.id
   next_hop_gateway = "default-internet-gateway"
   priority         = 1000
 }
