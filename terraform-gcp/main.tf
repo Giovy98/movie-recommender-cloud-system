@@ -32,6 +32,19 @@ resource "google_artifact_registry_repository" "docker_repo" {
   depends_on    = [google_project_service.api]
 }
 
+# Service Account personalizzato per i nodi GKE
+resource "google_service_account" "gke_nodes" {
+  account_id   = "gke-node-sa"
+  display_name = "Service Account per i nodi GKE"
+}
+
+# IAM binding per i permessi richiesti ai nodi GKE
+resource "google_project_iam_member" "gke_node_sa_binding" {
+  project = var.project_id
+  role    = "roles/container.nodeServiceAccount"
+  member  = "serviceAccount:${google_service_account.gke_nodes.email}"
+}
+
 resource "google_compute_network" "vpc" {
     name                    = "test-vpc"
     routing_mode            = "REGIONAL"
@@ -113,6 +126,7 @@ resource "google_compute_firewall" "allow_iap_ssh" {
   source_ranges = ["35.235.240.0/20"]
 }
 
+# Cluster GKE
 resource "google_container_cluster" "gke_cluster" {
   name     = "gke-cluster"
   location = local.region
@@ -120,7 +134,7 @@ resource "google_container_cluster" "gke_cluster" {
   subnetwork = google_compute_subnetwork.private.name
 
   remove_default_node_pool = true
-  initial_node_count       = 3
+  initial_node_count       = 1
 
   ip_allocation_policy {
     cluster_secondary_range_name  = "k8s-pods"
@@ -141,35 +155,42 @@ resource "google_container_cluster" "gke_cluster" {
   }
 
   depends_on = [
-    google_project_service.api,
-    google_compute_subnetwork.private
+    google_project_iam_member.gke_node_sa_binding
   ]
 }
 
+# Node pool con SA personalizzato
 resource "google_container_node_pool" "primary_nodes" {
-  name       = "primary-node-pool"
-  cluster    = google_container_cluster.gke_cluster.name
-  location   = local.region
+  name     = "primary-node-pool"
+  cluster  = google_container_cluster.gke_cluster.name
+  location = local.region
 
   node_config {
-    machine_type = "e2-medium"
+    machine_type   = "e2-medium"
+    service_account = google_service_account.gke_nodes.email
+
     oauth_scopes = [
-      "https://www.googleapis.com/auth/cloud-platform"
+      "https://www.googleapis.com/auth/logging.write",
+      "https://www.googleapis.com/auth/monitoring.write",
+      "https://www.googleapis.com/auth/devstorage.read_only"
     ]
+
+    metadata = {
+      disable-legacy-endpoints = "true"
+    }
+
     labels = {
       env = "dev"
     }
 
     tags = ["gke-node"]
-    metadata = {
-      disable-legacy-endpoints = "true"
-    }
   }
 
-  initial_node_count = 3
+  initial_node_count = 2
+
   autoscaling {
-    min_node_count = 3
-    max_node_count = 6
+    min_node_count = 1
+    max_node_count = 3
   }
 
   management {
@@ -177,13 +198,9 @@ resource "google_container_node_pool" "primary_nodes" {
     auto_upgrade = true
   }
 
-  depends_on = [google_container_cluster.gke_cluster]
-}
-
-resource "google_project_iam_member" "gke_node_service_account" {
-  project = var.project_id
-  role    = "roles/container.nodeServiceAccount"
-  member  = "serviceAccount:${var.gke_node_service_account_email}"
+  depends_on = [
+    google_container_cluster.gke_cluster
+  ]
 }
 
 
