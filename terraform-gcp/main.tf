@@ -182,8 +182,7 @@ resource "google_container_node_pool" "general" {
 
   node_config {
     preemptible  = false
-    machine_type = "e2-medium"
-    disk_size_gb = "100GB" 
+    machine_type = "e2-medium" 
 
     service_account = var.gke_sa_email
     oauth_scopes = [
