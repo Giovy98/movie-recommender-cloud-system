@@ -54,7 +54,7 @@ resource "google_compute_subnetwork" "public" {
 # subnet privata
 resource "google_compute_subnetwork" "private" {
   name                     = "private"
-  ip_cidr_range            = "10.0.32.0/19"
+  ip_cidr_range            = "10.0.32.0/19" 
   region                   = local.region
   network                  = google_compute_network.vpc.id
   private_ip_google_access = true
@@ -70,129 +70,98 @@ resource "google_compute_subnetwork" "private" {
   }
 }
 
-resource "google_compute_firewall" "allow_custom" {
-  name    = "gke-vpc-allow-custom"
-  network =  google_compute_network.vpc.name # Modifica con il nome della tua VPC
-  priority = 65534
-
-  direction = "INGRESS"
+# Regola vpc-gke-allow-custom
+resource "google_compute_firewall" "vpc_gke_allow_custom" {
+  name        = "vpc-gke-allow-custom"
+  network     = google_compute_network.vpc.name
+  description = "Consenti traffico custom da specifici intervalli IP"
+  
+  direction     = "INGRESS"
+  priority      = 65534
   source_ranges = ["10.0.0.0/19", "10.0.32.0/19"]
-
+  
   allow {
     protocol = "all"
   }
 }
 
-resource "google_compute_firewall" "allow_icmp" {
-  name    = "gke-vpc-allow-icmp"
-  network =  google_compute_network.vpc.name
-  priority = 65534
-
-  direction = "INGRESS"
+# Regola vpc-gke-allow-icmp
+resource "google_compute_firewall" "vpc_gke_allow_icmp" {
+  name        = "vpc-gke-allow-icmp"
+  network     = google_compute_network.vpc.name
+  description = "Consenti traffico ICMP da qualsiasi fonte"
+  
+  direction     = "INGRESS"
+  priority      = 65534
   source_ranges = ["0.0.0.0/0"]
-
+  
   allow {
     protocol = "icmp"
   }
 }
 
-resource "google_compute_firewall" "allow_ssh" {
-  name    = "gke-vpc-allow-ssh"
-  network =  google_compute_network.vpc.name
-  priority = 65534
-
-  direction = "INGRESS"
+# Regola vpc-gke-allow-rdp
+resource "google_compute_firewall" "vpc_gke_allow_rdp" {
+  name        = "vpc-gke-allow-rdp"
+  network     = google_compute_network.vpc.name
+  description = "Consenti traffico RDP (porta 3389) da qualsiasi fonte"
+  
+  direction     = "INGRESS"
+  priority      = 65534
   source_ranges = ["0.0.0.0/0"]
+  
+  allow {
+    protocol = "tcp"
+    ports    = ["3389"]
+  }
+}
 
+# Regola vpc-gke-allow-ssh
+resource "google_compute_firewall" "vpc_gke_allow_ssh" {
+  name        = "vpc-gke-allow-ssh"
+  network     = google_compute_network.vpc.name
+  description = "Consenti traffico SSH (porta 22) da qualsiasi fonte"
+  
+  direction     = "INGRESS"
+  priority      = 65534
+  source_ranges = ["0.0.0.0/0"]
+  
   allow {
     protocol = "tcp"
     ports    = ["22"]
   }
 }
 
-resource "google_compute_firewall" "deny_all_ingress" {
-  name    = "gke-vpc-deny-all-ingress"
-  network =  google_compute_network.vpc.name
-  priority = 65535
-
-  direction = "INGRESS"
+# Regola vpc-gke-deny-all-ingress
+resource "google_compute_firewall" "vpc_gke_deny_all_ingress" {
+  name        = "vpc-gke-deny-all-ingress"
+  network     = google_compute_network.vpc.name
+  description = "Rifiuta tutto il traffico in ingresso"
+  
+  direction     = "INGRESS"
+  priority      = 65535
   source_ranges = ["0.0.0.0/0"]
-
+  
   deny {
     protocol = "all"
   }
 }
 
-resource "google_compute_firewall" "allow_all_egress" {
-  name    = "gke-vpc-allow-all-egress"
-  network =  google_compute_network.vpc.name
-  priority = 65535
-
-  direction = "EGRESS"
+# Regola vpc-gke-allow-all-egress
+resource "google_compute_firewall" "vpc_gke_allow_all_egress" {
+  name        = "vpc-gke-allow-all-egress"
+  network     = google_compute_network.vpc.name
+  description = "Consenti tutto il traffico in uscita"
+  
+  direction     = "EGRESS"
+  priority      = 65535
   destination_ranges = ["0.0.0.0/0"]
-
+  
   allow {
     protocol = "all"
   }
 }
 
-resource "google_container_cluster" "gke_cluster" {
-  name     = "gke-cluster"
-  location = "us-west1-a" # livello zona
 
-  remove_default_node_pool = false
-  initial_node_count       = 3
 
-  network    = google_compute_network.vpc.name
-  subnetwork = google_compute_subnetwork.private.name
-
-  ip_allocation_policy {
-    cluster_secondary_range_name  = "k8s-pods"
-    services_secondary_range_name = "k8s-services"
-  }
-
-  private_cluster_config {
-    enable_private_nodes = false
-  }
-
-  node_config {
-    machine_type = "e2-medium"
-    oauth_scopes = [
-      "https://www.googleapis.com/auth/cloud-platform",
-    ]
-    metadata = {
-      disable-legacy-endpoints = "true"
-    }
-    tags = ["gke-node"]
-  }
-
-  # Abilita l'autoscaling nel pool predefinito
-  node_pool {
-    name       = "default-pool"
-    initial_node_count = 3
-
-    autoscaling {
-      min_node_count = 3
-      max_node_count = 6
-    }
-
-    node_config {
-      machine_type = "e2-medium"
-      oauth_scopes = [
-        "https://www.googleapis.com/auth/cloud-platform",
-      ]
-      metadata = {
-        disable-legacy-endpoints = "true"
-      }
-      tags = ["gke-node"]
-    }
-
-    management {
-      auto_repair  = true
-      auto_upgrade = true
-    }
-  }
-
-  depends_on = [google_project_service.api]
-}
 
