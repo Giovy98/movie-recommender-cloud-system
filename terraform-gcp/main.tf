@@ -37,6 +37,7 @@ resource "google_compute_network" "vpc" {
     routing_mode            = "REGIONAL"
     auto_create_subnetworks = false
     delete_default_routes_on_create = true
+    bgp_best_path_selection_mode = "LEGACY"
    
    depends_on = [google_project_service.api]
 }
@@ -70,97 +71,6 @@ resource "google_compute_subnetwork" "private" {
   }
 }
 
-# Regola vpc-gke-allow-custom
-resource "google_compute_firewall" "vpc_gke_allow_custom" {
-  name        = "vpc-gke-allow-custom"
-  network     = google_compute_network.vpc.name
-  description = "Consenti traffico custom da specifici intervalli IP"
-  
-  direction     = "INGRESS"
-  priority      = 65534
-  source_ranges = ["10.0.0.0/19", "10.0.32.0/19"]
-  
-  allow {
-    protocol = "all"
-  }
-}
-
-# Regola vpc-gke-allow-icmp
-resource "google_compute_firewall" "vpc_gke_allow_icmp" {
-  name        = "vpc-gke-allow-icmp"
-  network     = google_compute_network.vpc.name
-  description = "Consenti traffico ICMP da qualsiasi fonte"
-  
-  direction     = "INGRESS"
-  priority      = 65534
-  source_ranges = ["0.0.0.0/0"]
-  
-  allow {
-    protocol = "icmp"
-  }
-}
-
-# Regola vpc-gke-allow-rdp
-resource "google_compute_firewall" "vpc_gke_allow_rdp" {
-  name        = "vpc-gke-allow-rdp"
-  network     = google_compute_network.vpc.name
-  description = "Consenti traffico RDP (porta 3389) da qualsiasi fonte"
-  
-  direction     = "INGRESS"
-  priority      = 65534
-  source_ranges = ["0.0.0.0/0"]
-  
-  allow {
-    protocol = "tcp"
-    ports    = ["3389"]
-  }
-}
-
-# Regola vpc-gke-allow-ssh
-resource "google_compute_firewall" "vpc_gke_allow_ssh" {
-  name        = "vpc-gke-allow-ssh"
-  network     = google_compute_network.vpc.name
-  description = "Consenti traffico SSH (porta 22) da qualsiasi fonte"
-  
-  direction     = "INGRESS"
-  priority      = 65534
-  source_ranges = ["0.0.0.0/0"]
-  
-  allow {
-    protocol = "tcp"
-    ports    = ["22"]
-  }
-}
-
-# Regola vpc-gke-deny-all-ingress
-resource "google_compute_firewall" "vpc_gke_deny_all_ingress" {
-  name        = "vpc-gke-deny-all-ingress"
-  network     = google_compute_network.vpc.name
-  description = "Rifiuta tutto il traffico in ingresso"
-  
-  direction     = "INGRESS"
-  priority      = 65535
-  source_ranges = ["0.0.0.0/0"]
-  
-  deny {
-    protocol = "all"
-  }
-}
-
-# Regola vpc-gke-allow-all-egress
-resource "google_compute_firewall" "vpc_gke_allow_all_egress" {
-  name        = "vpc-gke-allow-all-egress"
-  network     = google_compute_network.vpc.name
-  description = "Consenti tutto il traffico in uscita"
-  
-  direction     = "EGRESS"
-  priority      = 65535
-  destination_ranges = ["0.0.0.0/0"]
-  
-  allow {
-    protocol = "all"
-  }
-}
 
 
 
