@@ -153,6 +153,9 @@ resource "google_container_node_pool" "primary_nodes" {
 
   node_config {
     machine_type = "e2-medium"
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform"
+    ]
     labels = {
       env = "dev"
     }
@@ -175,6 +178,12 @@ resource "google_container_node_pool" "primary_nodes" {
   }
 
   depends_on = [google_container_cluster.gke_cluster]
+}
+
+resource "google_project_iam_member" "gke_node_service_account" {
+  project = var.project_id
+  role    = "roles/container.nodeServiceAccount"
+  member  = "serviceAccount:${var.gke_node_service_account_email}"
 }
 
 

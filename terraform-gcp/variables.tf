@@ -18,3 +18,7 @@ variable "region" {
   type        = string
 }
 
+variable "gke_node_service_account_email" {
+  description = "Email del service account per i nodi GKE"
+  type        = string
+}
