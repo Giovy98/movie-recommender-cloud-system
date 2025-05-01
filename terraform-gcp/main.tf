@@ -135,3 +135,59 @@ resource "google_compute_firewall" "allow_all_egress" {
     protocol = "all"
   }
 }
+
+resource "google_container_cluster" "gke" {
+  name                     = "project-cloud-clustrer-gke"
+  location                 = "us-west1-a"
+  remove_default_node_pool = true
+  initial_node_count       = 3
+  network                  = google_compute_network.vpc.self_link
+  subnetwork               = google_compute_subnetwork.private.self_link
+  networking_mode          = "VPC_NATIVE"
+
+  release_channel {
+    channel = "REGULAR"
+  }
+
+  ip_allocation_policy {
+    cluster_secondary_range_name  = "k8s-pods"
+    services_secondary_range_name = "k8s-services"
+  }
+
+  private_cluster_config {
+    enable_private_nodes    = true
+    enable_private_endpoint = false
+    master_ipv4_cidr_block  = "192.168.0.0/28"
+  }
+}
+
+resource "google_service_account" "gke" {
+  account_id = "demo-gke"
+}
+
+resource "google_container_node_pool" "general" {
+  name    = "default-pool"
+  cluster = google_container_cluster.gke.id
+  node_count = 3
+
+  autoscaling {
+    min_node_count = 3
+    max_node_count = 6
+  }
+
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+
+  node_config {
+    preemptible  = false
+    machine_type = "e2-medium"
+    disk_size_gb = "100GB" 
+
+    service_account = var.gke_sa_email
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform"
+    ]
+  }
+}
