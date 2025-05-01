@@ -37,8 +37,6 @@ resource "google_compute_network" "vpc" {
     routing_mode            = "REGIONAL"
     auto_create_subnetworks = false
     delete_default_routes_on_create = true
-    bgp_best_path_selection_mode = "LEGACY"
-   
    depends_on = [google_project_service.api]
 }
 
