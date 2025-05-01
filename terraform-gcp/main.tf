@@ -37,7 +37,7 @@ resource "google_compute_network" "vpc" {
     routing_mode            = "REGIONAL"
     auto_create_subnetworks = false
     delete_default_routes_on_create = true
-   depends_on = [google_project_service.api]
+    depends_on = [google_project_service.api]
 }
 
 # subnet pubblica
@@ -68,7 +68,64 @@ resource "google_compute_subnetwork" "private" {
     ip_cidr_range = "172.20.0.0/18" # Range di IP privati per i servizi
   }
 }
+resource "google_compute_route" "default_route" {
+  name             = "default-route"
+  dest_range       = "0.0.0.0/0"
+  network          = google_compute_network.vpc_network.id
+  next_hop_gateway = "default-internet-gateway"
+  priority         = 1000
+}
 
+resource "google_container_cluster" "gke_cluster" {
+  name     = "gke-cluster"
+  location = "us-west1-a"
+
+  remove_default_node_pool = true
+  initial_node_count       = 3
+
+  network    = google_compute_network.vpc.name
+  subnetwork = google_compute_subnetwork.private.name
+
+  ip_allocation_policy {
+    cluster_secondary_range_name  = "k8s-pods"
+    services_secondary_range_name = "k8s-services"
+  }
+
+  private_cluster_config {
+    enable_private_nodes = false
+  }
+
+  depends_on = [google_project_service.api]
+}
+
+resource "google_container_node_pool" "default_pool" {
+  name       = "default-pool"
+  cluster    = google_container_cluster.gke_cluster.name
+  location   = "us-west1-a"
+
+  initial_node_count = 3
+
+  autoscaling {
+    min_node_count = 3
+    max_node_count = 6
+  }
+
+  node_config {
+    machine_type = "e2-medium"
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform"
+    ]
+    metadata = {
+      disable-legacy-endpoints = "true"
+    }
+    tags = ["gke-node"]
+  }
+
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+}
 
 
 
