@@ -44,7 +44,7 @@ resource "google_compute_network" "vpc" {
 resource "google_compute_subnetwork" "public" { # subnet pubblica
   name                     = "public"
   ip_cidr_range            = "10.0.0.0/19" #Riserva un range di IP privati.
-  region                   = local.region
+  region                   = "us-central1" # Regione in cui creare la subnet
   network                  = google_compute_network.vpc.id
   private_ip_google_access = true # Le VM possono accedere ai servizi Google 
   stack_type               = "IPV4_ONLY"
@@ -56,7 +56,7 @@ resource "google_compute_subnetwork" "public" { # subnet pubblica
 resource "google_compute_subnetwork" "private" {
   name                     = "private"
   ip_cidr_range            = "10.0.32.0/19"
-  region                   = local.region
+  region                   = "us-central1"
   network                  = google_compute_network.vpc.id
   private_ip_google_access = true
   stack_type               = "IPV4_ONLY"
@@ -82,13 +82,13 @@ resource "google_compute_address" "nat" {
 
 resource "google_compute_router" "router" {
   name    = "router-terraform"
-  region  = local.region
+  region  = "us-central1"
   network = google_compute_network.vpc.id
 }
 
 resource "google_compute_router_nat" "nat" {
   name   = "nat-router"
-  region = local.region
+  region = "us-central1"
   router = google_compute_router.router.name
 
   nat_ip_allocate_option             = "MANUAL_ONLY"
