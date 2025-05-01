@@ -138,10 +138,10 @@ resource "google_compute_firewall" "allow_all_egress" {
 
 resource "google_container_cluster" "gke_cluster" {
   name     = "gke-cluster"
-  location = "us-west1-a"
+  location = "us-west1-a" # livello zona
 
-  remove_default_node_pool = true
-  initial_node_count       = 3  # Richiesto anche se non usato
+  remove_default_node_pool = false
+  initial_node_count       = 3
 
   network    = google_compute_network.vpc.name
   subnetwork = google_compute_subnetwork.private.name
@@ -155,26 +155,10 @@ resource "google_container_cluster" "gke_cluster" {
     enable_private_nodes = false
   }
 
-  depends_on = [google_project_service.api]
-}
-
-resource "google_container_node_pool" "default_pool" {
-  name       = "default-pool"
-  location   = "us-west1-a"
-  cluster    = google_container_cluster.gke_cluster.name
-
-  initial_node_count = 3
-
-  autoscaling {
-    min_node_count = 3
-    max_node_count = 6
-  }
-
   node_config {
     machine_type = "e2-medium"
-    service_account = var.gke_sa_email
     oauth_scopes = [
-      "https://www.googleapis.com/auth/cloud-platform"
+      "https://www.googleapis.com/auth/cloud-platform",
     ]
     metadata = {
       disable-legacy-endpoints = "true"
@@ -182,8 +166,33 @@ resource "google_container_node_pool" "default_pool" {
     tags = ["gke-node"]
   }
 
-  management {
-    auto_repair  = true
-    auto_upgrade = true
+  # Abilita l'autoscaling nel pool predefinito
+  node_pool {
+    name       = "default-pool"
+    initial_node_count = 3
+
+    autoscaling {
+      min_node_count = 3
+      max_node_count = 6
+    }
+
+    node_config {
+      machine_type = "e2-medium"
+      oauth_scopes = [
+        "https://www.googleapis.com/auth/cloud-platform",
+      ]
+      metadata = {
+        disable-legacy-endpoints = "true"
+      }
+      tags = ["gke-node"]
+    }
+
+    management {
+      auto_repair  = true
+      auto_upgrade = true
+    }
   }
+
+  depends_on = [google_project_service.api]
 }
+
