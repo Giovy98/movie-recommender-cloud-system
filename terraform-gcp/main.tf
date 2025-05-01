@@ -113,6 +113,119 @@ resource "google_compute_firewall" "allow_iap_ssh" {
   source_ranges = ["35.235.240.0/20"]
 }
 
+# --- Cluster GKE Regionale Privato (Identico a prima) ---
+resource "google_container_cluster" "primary" {
+  name     = "gke-cluster-1" # Nome del tuo cluster GKE
+  location = local.region    # Usa la stessa regione delle altre risorse
 
+  # Networking
+  network    = google_compute_network.vpc.id
+  subnetwork = google_compute_subnetwork.private.id # Usa la subnet privata
+  logging_service    = "logging.googleapis.com/kubernetes" # Abilita Cloud Logging (raccomandato)
+  monitoring_service = "monitoring.googleapis.com/kubernetes" # Abilita Cloud Monitoring (raccomandato)
+  networking_mode = "VPC_NATIVE" # Obbligatorio per usare range secondari
 
+  # Configurazione VPC-Native (usa i range secondari definiti nella subnet "private")
+  ip_allocation_policy {
+    cluster_secondary_range_name  = google_compute_subnetwork.private.secondary_ip_range[1].range_name # "k8s-services"
+    services_secondary_range_name = google_compute_subnetwork.private.secondary_ip_range[0].range_name # "k8s-pods"
+  }
 
+  # Configurazione Cluster Privato
+  private_cluster_config {
+    enable_private_endpoint = true  # Il Control Plane ha solo IP privato
+    enable_private_nodes    = true  # I Nodi hanno solo IP privati
+    master_ipv4_cidr_block  = "192.168.10.0/28" # Range privato /28 *NON* sovrapposto per il Control Plane GKE. Scegli un range libero nella tua VPC.
+    # master_global_access_config { # Disabilita l'accesso globale al private endpoint (opzionale, più sicuro)
+    #   enabled = false
+    # }
+  }
+
+   # Rete autorizzata per accedere al Control Plane GKE
+   master_authorized_networks_config {
+     cidr_blocks {
+       cidr_block   = google_compute_subnetwork.private.ip_cidr_range
+       display_name = "Private Subnet Range"
+     }
+     cidr_blocks {
+        cidr_block = google_compute_subnetwork.public.ip_cidr_range
+        display_name = "Public Subnet Range"
+     }
+    #  cidr_blocks { # Se vuoi accedere da kubectl tramite NAT Gateway (meno sicuro di IAP/Bastion)
+    #    cidr_block   = "${google_compute_address.nat.address}/32"
+    #    display_name = "NAT Gateway IP"
+    #  }
+   }
+
+   # Abilita Network Policy (Calico) per sicurezza a livello di rete tra pod
+   network_policy {
+     enabled = true
+   }
+
+  # Rimuoviamo il node pool di default per crearne uno personalizzato
+  remove_default_node_pool = true
+  initial_node_count       = 1 # Richiesto anche se si rimuove il default node pool
+
+  depends_on = [
+    google_project_service.api,
+    google_compute_subnetwork.private,
+    google_compute_router_nat.nat # Assicura che il NAT sia pronto se i nodi devono scaricare da internet al boot
+  ]
+
+  # Specifica la versione minima del master (opzionale, ma buona pratica)
+  # Puoi usare una versione specifica o un canale (RAPID, REGULAR, STABLE)
+  # min_master_version = "1.29" # Esempio, controlla le versioni disponibili
+
+  # Abilita l'uso di Workload Identity (raccomandato per accesso sicuro ai servizi GCP dai pod)
+  workload_identity_config {
+    workload_pool = "${var.project_id}.svc.id.goog" # Assicurati di avere var.project_id
+  }
+}
+
+# --- Node Pool Personalizzato GKE ---
+resource "google_container_node_pool" "primary_nodes" {
+  name       = "default-pool" # Nome del node pool
+  location   = local.region
+  cluster    = google_container_cluster.primary.name
+  node_count = 1 # Numero iniziale di nodi (puoi abilitare l'autoscaling)
+
+  # Configurazione dei nodi
+  node_config {
+    machine_type = "e2-medium" # Scegli il tipo di macchina
+    disk_size_gb = 30          # Dimensione del disco di boot
+    disk_type    = "pd-standard" # Tipo di disco
+
+    # >>> MODIFICA CHIAVE: Usa il Service Account ESISTENTE fornito dalla variabile <<<
+    service_account = var.existing_gke_sa_email
+    # -----------------------------------------------------------------------------
+
+    oauth_scopes = [ # Definisci gli scope necessari per le API GCP
+      "https://www.googleapis.com/auth/cloud-platform" # Scope ampio, o più granulare:
+    ]
+
+    # Metadata raccomandati
+    metadata = {
+      disable-legacy-endpoints = "true"
+    }
+
+    # Tag di rete (utili per regole firewall specifiche)
+    tags = ["gke-node", "${google_container_cluster.primary.name}-node"]
+  }
+
+  # Gestione del Node Pool (auto-riparazione e auto-upgrade raccomandati)
+  management {
+    auto_repair  = true
+    auto_upgrade = true
+  }
+
+  # Opzionale: Abilita Autoscaling
+   autoscaling {
+     min_node_count = 1
+     max_node_count = 5
+   }
+
+  # Aggiornato depends_on: Rimosso dipendenze dai permessi IAM non più gestiti qui
+  depends_on = [
+    google_container_cluster.primary
+  ]
+}
