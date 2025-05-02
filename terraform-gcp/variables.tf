@@ -18,5 +18,7 @@ variable "region" {
   type        = string
 }
 
-
-  
+variable "gke_sa_email" {
+  description = "L'indirizzo email del Service Account esistente da usare per i nodi GKE."
+  type        = string
+}
