@@ -1,6 +1,6 @@
 resource "google_container_cluster" "gke_cluster" {
-  name     = "gke-cluster"
-  location = "us-west1-a"
+  name     = var.gke_cluster_name
+  location = var.zone
 
   remove_default_node_pool = true
   initial_node_count       = 3
@@ -23,7 +23,7 @@ resource "google_container_cluster" "gke_cluster" {
 resource "google_container_node_pool" "default_pool" {
   name       = "default-pool"
   cluster    = google_container_cluster.gke_cluster.name
-  location   = "us-west1-a"
+  location   = var.zone
 
   initial_node_count = 3
 
