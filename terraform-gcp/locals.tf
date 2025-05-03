@@ -9,17 +9,4 @@ locals {
     "compute.googleapis.com",           # per la  vpc 
     "container.googleapis.com",         # per il cluster GKE
   ]
-
-  roles =  [
-    "roles/artifactregistry.admin",
-    "roles/compute.networkAdmin",
-    "roles/compute.securityAdmin",
-    "roles/container.admin",
-    "roles/iam.projectIamAdmin",
-    "roles/iam.serviceAccountAdmin",
-    "roles/iam.serviceAccountUser",
-    "roles/servicemanagement.admin",
-    "roles/serviceusage.serviceUsageAdmin",
-    "roles/storage.admin"
-  ]
 }
