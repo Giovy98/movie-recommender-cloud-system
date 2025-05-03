@@ -101,11 +101,13 @@ def health_check():
         return {"status": "ok"}
     except:
         raise HTTPException(status_code=500, detail="API non pronta")
-
+    
+# ottiene raccomandazioni per un film specifico -> metodo: GET
 @app.get("/recommend/{movie_name}", tags=["Recommend"])
 def get_recommendations(movie_name: str):
     return recommend(movie_name)
 
+# ottiene raccomandazioni per un film specifico -> metodo: POST
 @app.post("/recommend", tags=["Recommend"])
 def recommend_movie(request: MovieRequest):
     return recommend(request.movie_name)
