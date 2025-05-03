@@ -2,6 +2,9 @@ name: Create GCP Service Account
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/infra-sa-managed.yml'
 
 jobs:
   create-sa:
