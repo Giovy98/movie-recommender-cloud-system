@@ -1,0 +1,64 @@
+name: GCP Infrastructure Provisioning
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'terraform-gcp-sa-managed/**'
+      - '.github/workflows/infra-sa-managed.yml'
+
+env:
+  TF_VERSION: '1.5.0'
+  WORKING_DIR: './terraform-gcp-sa-managed'
+
+  # Variabili Terraform
+  TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+  TF_VAR_region: ${{ secrets.GCP_REGION }}
+  TF_VAR_sa_email: ${{ secrets.GCP_SERVICE_ACCOUNT_2 }}
+
+jobs:
+  provision-infrastructure-sa:
+    name: Provision GCP Infrastructure SA
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Set Terraform Cloud credentials
+        run: |
+          mkdir -p ~/.terraform.d
+          echo '{"credentials":{"app.terraform.io":{"token":"${{ secrets.TFC_TOKEN }}"}}}' > ~/.terraform.d/credentials.tfrc.json
+
+      - name: Authenticate with GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_2 }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.WORKING_DIR }}
+        run: terraform init -input=false
+
+      - name: Terraform Format
+        working-directory: ${{ env.WORKING_DIR }}
+        run: terraform fmt -recursive
+
+      - name: Terraform Validate
+        working-directory: ${{ env.WORKING_DIR }}
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: ${{ env.WORKING_DIR }}
+        run: terraform plan -no-color
+
+      - name: Terraform Apply
+        working-directory: ${{ env.WORKING_DIR }}
+        run: terraform apply -auto-approve
+
+        
