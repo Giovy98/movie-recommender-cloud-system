@@ -31,14 +31,16 @@ jobs:
           SA_EMAIL="service-account-gke-managment@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com"
           PROJECT_ID="${{ secrets.GCP_PROJECT_ID }}"
 
-          echo "Assegno ruolo roles/iam.serviceAccountAdmin a $SA_EMAIL"
+          echo "Assegno ruolI  a $SA_EMAIL"
 
           ROLES=(
-            "roles/iam.serviceAccountAdmin"
             "roles/resourcemanager.projectIamAdmin"
           )
 
-          gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-            --member="serviceAccount:$SA_EMAIL" \
-            --role= \
-            --quiet
+          for ROLE in "${ROLES[@]}"; do
+            echo "Assigning $ROLE to $SA_EMAIL"
+            gcloud projects add-iam-policy-binding "${{ secrets.GCP_PROJECT_ID }}" \
+              --member="serviceAccount:$SA_EMAIL" \
+              --role="$ROLE" \
+              --quiet
+          done
