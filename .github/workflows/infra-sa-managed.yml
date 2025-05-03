@@ -1,4 +1,4 @@
-name: GCP Infrastructure Provisioning
+name: GCP Infrastructure Provisioning Service Account
 
 on:
   workflow_dispatch:

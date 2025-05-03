@@ -12,8 +12,4 @@ variable "region" {
   type        = string
 }
 
-variable "zone" {
-  description = "Zona GCP"
-  type = string
-}
 
