@@ -25,10 +25,10 @@ jobs:
         uses: google-github-actions/setup-gcloud@v1
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
-
+          
       - name: Assign roles/iam.serviceAccountAdmin
         run: |
-          SA_EMAIL="cloud-recommender-sa@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com"
+          SA_EMAIL="service-account-gke-managment@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com"
           PROJECT_ID="${{ secrets.GCP_PROJECT_ID }}"
 
           echo "Assegno ruolo roles/iam.serviceAccountAdmin a $SA_EMAIL"
