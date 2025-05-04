@@ -34,7 +34,7 @@ resource "google_compute_subnetwork" "private" {
     ip_cidr_range = "172.20.0.0/18" # Range di IP privati per i servizi
   }
 }
-resource "google_compute_route" "default_route" {
+resource "google_compute_route" "default_route" { 
   name             = "default-route"
   dest_range       = "0.0.0.0/0"
   network          = google_compute_network.vpc.id

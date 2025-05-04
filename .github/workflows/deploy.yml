@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - cloud-provider-testing-feature
+      - cloud-provider-testing-main
     paths:
       - 'data/**'
       - 'api_service/**'
@@ -28,7 +28,7 @@ jobs:
     - name: Google Auth
       uses: google-github-actions/auth@v1
       with:
-        credentials_json: ${{ secrets.GCP_SA_KEY_2 }}
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
 
     - name: Set up gcloud
       uses: google-github-actions/setup-gcloud@v1
@@ -60,7 +60,7 @@ jobs:
     - name: Google Auth
       uses: google-github-actions/auth@v1
       with:
-        credentials_json: ${{ secrets.GCP_SA_KEY_2 }}
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
 
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v1
@@ -93,7 +93,7 @@ jobs:
     - name: Google Auth
       uses: google-github-actions/auth@v1
       with:
-        credentials_json: ${{ secrets.GCP_SA_KEY_2 }}
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
 
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v2
