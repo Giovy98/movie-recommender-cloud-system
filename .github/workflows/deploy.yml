@@ -4,9 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - cloud-provider-testing-main
+      - google-cloud-project-main
     paths:
-      - 'data/**'
       - 'api_service/**'
       - 'preprocessing_service/**'
       - 'recommender_service/**'
