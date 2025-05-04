@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - cloud-provider-testing-main
+      - google-cloud-project-main
     paths:
       - 'terraform-gcp/**'
       - '.github/workflows/infra.yml'
