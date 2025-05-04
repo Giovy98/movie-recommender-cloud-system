@@ -9,10 +9,10 @@ terraform {
   }
   backend "remote" {
     hostname = "app.terraform.io"
-    organization = "organization_name" # Replace with your Terraform Cloud organization name
+    organization = "organization_name" # Rimpiazza con il nome dell'organizzazione di Terraform Cloud
 
     workspaces {
-      name = "workspace_name" # Replace with your desired workspace name
+      name = "workspace_name" # Rimpiazza con il nome del workspace da te assegnato
     }
     
   }
