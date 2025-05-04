@@ -9,10 +9,10 @@ terraform {
   }
   backend "remote" {
     hostname = "app.terraform.io"
-    organization = var.tfc_organization 
+    organization = local.tfc_organization
 
     workspaces {
-      name = var.tfc_workspace 
+      name = local.tfc_workspace
     }
     
   }
