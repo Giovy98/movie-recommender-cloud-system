@@ -19,6 +19,9 @@ env:
   TF_VAR_gke_sa_email: ${{ secrets.GCP_SERVICE_ACCOUNT }}
   TF_VAR_zone: ${{ secrets.GCP_ZONE }}
   TF_VAR_gke_cluster_name: ${{ secrets.GCP_GKE_CLUSTER_NAME }}
+  TF_VAR_tfc_organization: ${{ secrets.TFC_ORGANIZATION }}
+  TF_VAR_tfc_workspace: ${{ secrets.TFC_WORKSPACE }}
+
 
 jobs:
   provision-infrastructure:

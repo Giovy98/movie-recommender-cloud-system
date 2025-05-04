@@ -33,3 +33,13 @@ variable "gke_cluster_name" {
   type        = string
   
 }
+
+variable "tfc_organization" {
+  description = "Nome dell'organizzazione in Terraform Cloud"
+  type        = string
+}
+
+variable "tfc_workspace" {
+  description = "Nome del workspace in Terraform Cloud"
+  type        = string
+}
