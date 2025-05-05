@@ -132,7 +132,7 @@ chmod +x file-configuration.sh
 ./file-configuration.sh
 ```
 
-### 5. Avvio del pipeline e dei servizi
+### 5. Avvio pipeline per Argo e il Deployment dei Servizi
 
 ```bash
 chmod +x pipe-cloud-gke.sh
