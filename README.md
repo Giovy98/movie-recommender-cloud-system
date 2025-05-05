@@ -7,7 +7,7 @@ Questo progetto implementa un sistema di raccomandazione di film basato su GCP (
 
 ## 📋 Indice
 - [Panoramica](#panoramica)
-- [Architettura](#architettura)
+- [Struttura del Progetto](#strutturadelprogetto)
 - [Prerequisiti](#prerequisiti)
 - [Configurazione](#configurazione)
 - [Deployment](#deployment)
@@ -112,8 +112,16 @@ Il workflow `deploy.yml` viene eseguito automaticamente quando vengono apportate
 # Esecuzione manuale del workflow di deployment
 git push origin google-cloud-project-main
 ```
+### 3. Accesso al Cluster Kubernetes
+Dopo aver creato e configurato il cluster GKE, è possibile connettersi ad esso utilizzando il seguente comando:
+```bash
+ gcloud container GCP_GKE_CLUSTER_NAME
+ \--zone GCP_ZONE
+ \--project GCP_PROJECT_ID
+```
+Sostituire GCP_GKE_CLUSTER_NAME, GCP_ZONE e GCP_PROJECT_ID con i valori appropriati del proprio ambiente.
 
-### 3. Configurazione del cluster Kubernetes
+### 4. Configurazione del cluster Kubernetes
 
 Dopo il deployment, esegui lo script di configurazione:
 
@@ -122,7 +130,7 @@ chmod +x file-configuration.sh
 ./file-configuration.sh
 ```
 
-### 4. Avvio del pipeline e dei servizi
+### 5. Avvio del pipeline e dei servizi
 
 ```bash
 chmod +x pipe-cloud-gke.sh
