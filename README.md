@@ -16,7 +16,7 @@ Questo progetto implementa un sistema di raccomandazione di film basato su GCP (
 
 ## 🔍 Panoramica
 
-Il sistema offre raccomandazioni di film basate sulla similarità coseno tra le caratteristiche dei film, utilizzando un dataset TMDB (The Movie Database). L'architettura è completamente containerizzata e deployata su GKE (Google Kubernetes Engine), con la gestione dell'infrastruttura tramite Terraform.
+Il sistema offre raccomandazioni di film basate su contenuti, utilizzando un dataset parziale di TMDB (The Movie Database). L'architettura è completamente containerizzata e deployata su GKE (Google Kubernetes Engine), con la gestione dell'infrastruttura tramite Terraform.
 
 
 ## 📂 Struttura del Progetto
