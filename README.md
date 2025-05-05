@@ -46,7 +46,9 @@ Il sistema offre raccomandazioni di film basate su contenuti, utilizzando un dat
 - Service Account con i permessi necessari
 - Terraform Cloud account (per la gestione dell'infrastruttura)
 - Docker installato localmente (per sviluppo e test)
-- kubectl e gcloud CLI installati localmente
+- gcloud CLI e il suo plugin ```gke-gcloud-auth-plugin``` installati localmente
+- ```gcloud components install kubectl``` # per kubectl
+
 
 ## ⚙️ Configurazione
 
