@@ -87,12 +87,13 @@ Configura i seguenti segreti nel tuo repository GitHub:
 ### 3. Service Account
 
 1. Crea un service account con i seguenti ruoli:
-   - Artifact Registry amministrator
-   - Compute security Admin
-   - Service Usage Admin
-   - Storage Admin
-   - Kubernetes Engine Admin
-   - Service Account User
+    - Artifact Registry administrator
+    - Compute security Admin
+    - Compute Network Admin 
+    - Service Usage Admin 
+    - Service Account User 
+    - Storage Admin 
+    - Kubernetes Engine Admin 
 3. Crea una chiave JSON e salvala come `gcs-key.json` nella root del progetto.
 
 ## 🚀 Deployment
@@ -125,7 +126,19 @@ Sostituire GCP_GKE_CLUSTER_NAME, GCP_ZONE e GCP_PROJECT_ID con i valori appropri
 
 ### 4. Configurazione del cluster Kubernetes
 
-Dopo il deployment, esegui lo script di configurazione:
+Dopo il deployment
+
+```bash
+kubectl create secret docker-registry gcr-json-key-gke-$namespace \
+  --docker-server=GCP-REGION-docker.pkg.dev \
+  --docker-username=_json_key \
+  --docker-password="$(cat gcs-key.json)" \
+  --docker-email=tua@email.com \
+  --namespace=$namespace
+``` 
+Modifica rispettivamente GCP-REGION e tua@email.com con la regione corretta di Google Cloud e l'indirizzo email personale
+
+poi esegui lo script 
 
 ```bash
 chmod +x file-configuration.sh
