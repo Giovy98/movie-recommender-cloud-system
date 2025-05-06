@@ -61,7 +61,7 @@ def upload_to_gcs(bucket, data, destination_blob):
 
         blob = bucket.blob(destination_blob)
 
-        # Upload con timeout esteso e upload riprendibile abilitato
+        # Upload con timeout esteso 
         blob.upload_from_filename(
             tmp_file_path,
             content_type="application/octet-stream",
