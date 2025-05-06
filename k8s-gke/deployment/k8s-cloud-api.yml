@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: GCP-REGION-docker.pkg.dev/GCP_PROJECT_ID/GCP_ARTIFACT_REPOSITERY/api_service:latest
+          image: GCP-REGION-docker.pkg.dev/GCP_PROJECT_ID/ARTIFACT_REPOSITERY/api_service:latest
           ports:
             - containerPort: 8000
           resources:
