@@ -1,23 +1,17 @@
 # 🎬 Sistema di Raccomandazione Film su Google Cloud Platform
 
-Questo progetto implementa un sistema di raccomandazione di film basato su GCP (Google Cloud Platform), utilizzando Kubernetes (GKE) per l'orchestrazione dei container e Argo Workflows per l'automazione dei processi di elaborazione dati.
+Questo progetto implementa un sistema di raccomandazione di film content-base su GCP (Google Cloud Platform), utilizzando Kubernetes (GKE) per l'orchestrazione dei container, Terraform per fare il provisioning  dell'infrastruttura e  Argo Workflows per la gestione di job sequenziali.
 
 ![cloud-based-gcp-rcsys-1](https://github.com/user-attachments/assets/af9369cf-41db-41ad-866d-6ce1f4eec34b)
 
 
 ## 📋 Indice
-- [Panoramica](#panoramica)
 - [Struttura del Progetto](#strutturadelprogetto)
 - [Prerequisiti](#prerequisiti)
 - [Configurazione](#configurazione)
 - [Deployment](#deployment)
 - [Utilizzo](#utilizzo)
 - [Troubleshooting](#troubleshooting)
-
-## 🔍 Panoramica
-
-Il sistema offre raccomandazioni di film basate su contenuti, utilizzando un dataset parziale di TMDB (The Movie Database). L'architettura è completamente containerizzata e deployata su GKE (Google Kubernetes Engine), con la gestione dell'infrastruttura tramite Terraform.
-
 
 ## 📂 Struttura del Progetto
 
@@ -37,6 +31,7 @@ Il sistema offre raccomandazioni di film basate su contenuti, utilizzando un dat
 ├── .env                   # Variabili d'ambiente
 ├── file-configuration.sh  # Script di configurazione Kubernetes
 └── pipe-cloud-gke.sh      # Script di avvio pipeline e servizi
+└── .gitignore 
 ```
 
 ## 📝 Prerequisiti
@@ -46,8 +41,9 @@ Il sistema offre raccomandazioni di film basate su contenuti, utilizzando un dat
 - Service Account con i permessi necessari
 - Terraform Cloud account (per la gestione dell'infrastruttura)
 - Docker installato localmente (per sviluppo e test)
-- gcloud CLI e il suo plugin ```gke-gcloud-auth-plugin``` installati localmente
-- ```gcloud components install kubectl``` # per kubectl
+- gcloud CLI e il suoi plugin installati localmente
+    - ```gke-gcloud-auth-plugin```    
+    -  ```gcloud components install kubectl``` 
 
 
 ## ⚙️ Configurazione
@@ -94,27 +90,41 @@ Configura i seguenti segreti nel tuo repository GitHub:
     - Service Account User 
     - Storage Admin 
     - Kubernetes Engine Admin 
-3. Crea una chiave JSON e salvala come `gcs-key.json` nella root del progetto.
+2. Crea e Scarica una chiave JSON e salvala come `gcs-key.json` nella root del progetto.
 
 ## 🚀 Deployment
 
 ### 1. Provisioning dell'infrastruttura
 
-Il workflow `infra.yml` viene eseguito automaticamente quando vengono apportate modifiche alla directory `terraform-gcp`. Altrimenti, può essere eseguito manualmente:
+Il workflow `infra.yml` viene eseguito automaticamente quando vengono apportate modifiche alla directory `terraform-gcp` o al workflow stesso. Altrimenti, può essere eseguito manualmente dall'interfaccia di gitaction.
 
 ```bash
-# Esecuzione manuale del workflow di infrastruttura
-git push origin google-cloud-project-main
+ 1 git add terraform-gcp
+ 2 git commit-m "Modifiche alla configurazione Terraform"
+ 3 git push origin google-cloud-project-main
+```
+or
+```bash
+ git add .github\workflow\infra.yml
+ 2 git commit-m "Aggiornamento del workflow infra.yml"
+ 3 git push origin google-cloud-project-main
 ```
 
 ### 2. Deployment dei servizi
 
-Il workflow `deploy.yml` viene eseguito automaticamente quando vengono apportate modifiche ai servizi. Altrimenti, può essere eseguito manualmente:
+Il workflow `deploy.yml` viene eseguito automaticamente quando vengono apportate modifiche ai servizi o al workflow stesso. Altrimenti, può essere eseguito manualmente dall'interfaccia di gitaction.
 
 ```bash
-# Esecuzione manuale del workflow di deployment
-git push origin google-cloud-project-main
-```
+ 1 git add api/preprocessing/recommender/ui_service
+ 2 git commit-m "Aggiornamento dei microservizi"
+ 3 git push origin google-cloud-project-main
+``` 
+or
+```bash
+ 1 git add .github\workflow\deply.yml
+ 2 git commit-m "Modifica al workflow deploy.yml""
+ 3 git push origin google-cloud-project-main
+``` 
 ### 3. Accesso al Cluster Kubernetes
 Dopo aver creato e configurato il cluster GKE, è possibile connettersi ad esso utilizzando il seguente comando:
 ```bash
@@ -126,7 +136,7 @@ Sostituire GCP_GKE_CLUSTER_NAME, GCP_ZONE e GCP_PROJECT_ID con i valori appropri
 
 ### 4. Configurazione del cluster Kubernetes
 
-Dopo il deployment
+Dopo il deployment, nel file bash `file-configuration.sh` nella porzione di codice 
 
 ```bash
 kubectl create secret docker-registry gcr-json-key-gke-$namespace \
@@ -136,9 +146,7 @@ kubectl create secret docker-registry gcr-json-key-gke-$namespace \
   --docker-email=tua@email.com \
   --namespace=$namespace
 ``` 
-Modifica rispettivamente GCP-REGION e tua@email.com con la regione corretta di Google Cloud e l'indirizzo email personale
-
-poi esegui lo script 
+modifica rispettivamente GCP-REGION e tua@email.com con la regione corretta di Google Cloud e l'indirizzo email personale per poi eseguire lo script con le modifiche apportate adeguatamente
 
 ```bash
 chmod +x file-configuration.sh
@@ -160,6 +168,7 @@ Una volta completato il deployment:
    ```bash
    kubectl get service ui-service -n deployment
    ```
+   oppure direttamente nella sezione `Gateway, servizi e Ingress`  di GKE
 
 2. Accedi all'interfaccia web tramite browser all'indirizzo `http://<EXTERNAL-IP>:8501`
 
