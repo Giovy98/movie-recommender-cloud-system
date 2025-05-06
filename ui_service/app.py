@@ -8,7 +8,7 @@ import os
 
 # === CONFIG ===
 API_URL = os.getenv("API_URL")
-GCS_KEY_PATH = "/var/secrets/key.json"  # Percorso al file di credenziali
+GCS_KEY_PATH = "/var/secrets/key.json"  
 BUCKET_NAME = os.getenv("GCS_BUCKET_NAME")
 DATA_BLOB = os.getenv("GCS_PROCESSED_BLOB")
 
