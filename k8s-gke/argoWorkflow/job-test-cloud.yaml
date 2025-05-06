@@ -24,7 +24,7 @@ spec:
 
     - name: preprocess
       container:
-        image: GCP-REGION.pkg.dev/GCP_PROJECT_ID/GCP_ARTIFACT_REPOSITERY/preprocessing_service:latest
+        image: GCP-REGION.pkg.dev/GCP_PROJECT_ID/ARTIFACT_REPOSITERY/preprocessing_service:latest
         command: ["python"]
         args: ["preprocessing.py"]
         volumeMounts:
@@ -44,7 +44,7 @@ spec:
 
     - name: compute
       container:
-        image: GCP-REGION.pkg.dev/GCP_PROJECT_ID/GCP_ARTIFACT_REPOSITERY/recommender_service:latest
+        image: GCP-REGION.pkg.dev/GCP_PROJECT_ID/ARTIFACT_REPOSITERY/recommender_service:latest
         command: ["python"]
         args: ["recommender.py"]
         volumeMounts:
