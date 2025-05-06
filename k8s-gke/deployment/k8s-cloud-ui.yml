@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: ui
-        image: GCP-REGION.pkg.dev/GCP_PROJECT_ID/GCP_ARTIFACT_REPOSITERY/ui_service:latest
+        image: GCP-REGION.pkg.dev/GCP_PROJECT_ID/ARTIFACT_REPOSITERY/ui_service:latest
         resources:
           requests:
             memory: "128Mi"
