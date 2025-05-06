@@ -16,7 +16,6 @@ MOVIES_BLOB = os.getenv("GCS_RAW_MOVIES_BLOB")
 CREDITS_BLOB = os.getenv("GCS_RAW_CREDITS_BLOB")
 PROCESSED_BLOB = os.getenv("GCS_PROCESSED_BLOB")
 
-# === Funzioni utili ===
 def init_gcs_client():
     return storage.Client.from_service_account_json(GCS_KEY_PATH)
 
