@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
   
   workflow_run:
-    workflows: ["GCP Infrastructure Provisioning"]
+    workflows: 
+      - GCP Infrastructure Provisioning
     types:
       - completed
   push:
