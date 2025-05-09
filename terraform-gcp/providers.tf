@@ -12,7 +12,7 @@ terraform {
     organization = "giovy-team" 
 
     workspaces {
-      name = "cloud-provider-infrastructure" 
+      name = "google-provider-remote-state" 
     }
     
   }
