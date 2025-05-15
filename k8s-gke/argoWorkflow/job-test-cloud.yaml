@@ -24,7 +24,7 @@ spec:
 
     - name: preprocess
       container:
-        image: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/preprocessing_service:latest
+        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/preprocessing_service:latest
         command: ["python"]
         args: ["preprocessing.py"]
         volumeMounts:
@@ -44,7 +44,7 @@ spec:
 
     - name: compute
       container:
-        image: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/recommender_service:latest
+        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}//recommender_service:latest
         command: ["python"]
         args: ["recommender.py"]
         volumeMounts:

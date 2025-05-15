@@ -12,11 +12,14 @@ on:
       - 'recommender_service/**'
       - 'ui_service/**'
       - '.github/workflows/deploy.yml'
+      - 'k8s-gke/**'
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: ${{ secrets.GCP_REGION }}
   DOCKER_EMAIL: ${{ secrets.DOCKER_EMAIL }}
+  ARTIFACT_REPOSITORY: ${{ secrets.ARTIFACT_REPOSITORY }}
+
 
 jobs:
   upload-data:
@@ -230,13 +233,16 @@ jobs:
           chmod +x argo-linux-amd64
           sudo mv argo-linux-amd64 /usr/local/bin/argo
           argo version
-        
+      
+    - name: Replace Variable in workflow
+      run: |
+         envsubst < job-test-cloud.yaml > job-test-cloud-2.yaml
     - name: deploy-sequential-jobs-argo-workflow
       run: |
         echo "Contenuto della cartella k8s-gke/argoWorkflow:"
         ls -la k8s-gke/argoWorkflow/*
         echo "Submitting Argo workflow..."
-        argo submit k8s-gke/argoWorkflow/job-test-cloud.yaml -n argo --watch
+        argo submit k8s-gke/argoWorkflow/job-test-cloud-2.yaml -n argo --watch
         
     - name: Clean up sensitive files
       if: always()
