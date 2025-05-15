@@ -38,6 +38,7 @@ Questo progetto implementa un sistema di raccomandazione di film content-base su
 - Progetto GCP creato
 - Service Account con i permessi necessari
 - Terraform Cloud account (per la gestione dell'infrastruttura)
+- Repository Github per poter usare gitaction
 - Opzionale per test locale:
   - Docker installato localmente 
   - Gcloud CLI e il suoi plugin installati localmente 
