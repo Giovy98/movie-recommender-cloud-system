@@ -65,10 +65,11 @@ jobs:
         working-directory: ${{ env.WORKING_DIR }}
         run: terraform apply -auto-approve
 
-
-        
-        
+         
 
 
         
+        
+
+
         
