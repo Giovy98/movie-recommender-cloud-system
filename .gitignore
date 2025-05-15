@@ -181,6 +181,4 @@ file-configuration.sh
 
 pipe-cloud-gke.sh
 
-k8s-gke/deployment/*
-
 .env

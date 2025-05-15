@@ -184,10 +184,18 @@ jobs:
         export PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
         export ARTIFACT_REPOSITORY=${{ secrets.ARTIFACT_REPOSITORY }}
         envsubst < k8s-gke/argoWorkflow/job-test-cloud.yaml > k8s-gke/argoWorkflow/job-test-cloud-2.yaml
+        envsubst < k8s-gke/deployment/k8s-cloud-api.yml > k8s-gke/deployment/k8s-cloud-api-2.yml
+        envsubst < k8s-gke/deployment/k8s-cloud-ui.yml > k8s-gke/deployment/k8s-cloud-ui-2.yml
 
     - name: Submit Argo Workflow
       run: |
         argo submit k8s-gke/argoWorkflow/job-test-cloud-2.yaml -n argo --watch
+
+    - name: Deploy API and UI Services
+      run: |
+        echo "Applying Kubernetes deployments and services..."
+        kubectl apply -f k8s-gke/deployment/k8s-cloud-api-2.yml
+        kubectl apply -f k8s-gke/deployment/k8s-cloud-ui-2.yml
 
     - name: Clean Up Sensitive Files
       if: always()
