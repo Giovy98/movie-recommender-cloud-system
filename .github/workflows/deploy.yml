@@ -221,7 +221,11 @@ jobs:
         else
           echo "RoleBinding per Argo già esistente"
         fi
-
+    
+    - name: Setup ArgoCD CLI 
+      uses: imajeetyadav/argocd-cli@v1
+      with:
+        version: v3.6.5
     - name: deploy-sequential-jobs-argo-workflow
       run: |
         echo "Contenuto della cartella k8s-gke/argoWorkflow:"
