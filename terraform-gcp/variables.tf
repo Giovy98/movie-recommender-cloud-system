@@ -1,7 +1,8 @@
-variable "sa_email" {
-  description = "L'indirizzo email del Service Account."
+variable "gke_sa_email" {
+  description = "L'indirizzo email del Service Account esistente da usare per i nodi GKE."
   type        = string
 }
+
 variable "project_id" {
   description = "ID del progetto GCP"
   type        = string
