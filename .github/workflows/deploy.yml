@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - google-cloud-project-production
+      - google-cloud-project-feature
     paths:
       - 'data/**'
       - 'api_service/**'
