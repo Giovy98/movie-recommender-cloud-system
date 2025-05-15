@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - google-cloud-project-feature
+      - google-cloud-project-
     paths:
       - 'data/**'
       - 'api_service/**'
@@ -221,6 +221,13 @@ jobs:
         else
           echo "RoleBinding per Argo già esistente"
         fi
+
+    - name: deploy-sequential-jobs-argo-workflow
+      run: |
+        echo "Contenuto della cartella k8s-gke/argoWorkflow:"
+        ls -la k8s-gke/argoWorkflow/*
+        echo "Submitting Argo workflow..."
+        argo submit k8s-gke/argoWorkflow/job-test-cloud.yaml -n argo --watch
         
     - name: Clean up sensitive files
       if: always()

@@ -177,9 +177,10 @@ cython_debug/
 # Service account key file
 gcs-key.json
 
-# k8s
-k8s-gke/
-
-# configuration files
 file-configuration.sh
+
 pipe-cloud-gke.sh
+
+k8s-gke/deployment/*
+
+.env
