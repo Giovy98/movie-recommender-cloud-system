@@ -203,3 +203,5 @@ jobs:
         rm -f ./gcs-key.json
         rm -f .env
         echo "File sensibili eliminati"
+
+        
