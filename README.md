@@ -1,6 +1,6 @@
 # 🎬 Sistema di Raccomandazione Film su Google Cloud Platform
 
-Questo progetto implementa un sistema di raccomandazione di film content-base su GCP (Google Cloud Platform), utilizzando Kubernetes (GKE) per l'orchestrazione dei container, Terraform per fare il provisioning  dell'infrastruttura e  Argo Workflows per la gestione di job sequenziali.
+Questo progetto implementa un sistema di raccomandazione di film content-base su GCP (Google Cloud Platform), utilizzando Kubernetes (GKE) per l'orchestrazione dei container, Terraform per fare il provisioning  dell'infrastruttura e Argo Workflows per la gestione di job sequenziali.
 
 ![cloud-based-gcp-rcsys-1](https://github.com/user-attachments/assets/af9369cf-41db-41ad-866d-6ce1f4eec34b)
 
@@ -29,8 +29,6 @@ Questo progetto implementa un sistema di raccomandazione di film content-base su
 │   └── deployment         # Manifesti Kubernetes per i servizi
 ├── terraform-gcp          # Configurazione Terraform per GCP
 ├── .env                   # Variabili d'ambiente
-├── file-configuration.sh  # Script di configurazione Kubernetes
-└── pipe-cloud-gke.sh      # Script di avvio pipeline e servizi
 └── .gitignore 
 ```
 
@@ -40,11 +38,12 @@ Questo progetto implementa un sistema di raccomandazione di film content-base su
 - Progetto GCP creato
 - Service Account con i permessi necessari
 - Terraform Cloud account (per la gestione dell'infrastruttura)
-- Docker installato localmente (per sviluppo e test)
-- gcloud CLI e il suoi plugin installati localmente
-    - ```gke-gcloud-auth-plugin```    
-    -  ```gcloud components install kubectl``` 
-
+- Opzionale per test locale:
+  - Docker installato localmente 
+  - Gcloud CLI e il suoi plugin installati localmente 
+      - ```gke-gcloud-auth-plugin```    
+      -  ```gcloud components install kubectl``` 
+  - Terraform installato localmente 
 
 ## ⚙️ Configurazione
 
@@ -79,6 +78,9 @@ Configura i seguenti segreti nel tuo repository GitHub:
 - `ARTIFACT_REPOSITORY`: Nome del repository Artifact Registry
 - `GCP_GKE_CLUSTER_NAME`: Nome del cluster GKE
 - `TFC_TOKEN`: Token di accesso Terraform Cloud
+- `DOCKER_EMAIL`: Indirizzo email personale utilizzato per l’autenticazione su
+ Docker
+- `ENV_FILE`: Environment file `.env`
 
 ### 3. Service Account
 
@@ -105,66 +107,52 @@ Il workflow `infra.yml` viene eseguito automaticamente quando vengono apportate 
 ```
 or
 ```bash
- git add .github\workflow\infra.yml
+ git add .github/workflow/infra.yml
  2 git commit-m "Aggiornamento del workflow infra.yml"
  3 git push origin google-cloud-project-main
 ```
 
 ### 2. Deployment dei servizi
 
-Il workflow `deploy.yml` viene eseguito automaticamente quando vengono apportate modifiche ai servizi o al workflow stesso. Altrimenti, può essere eseguito manualmente dall'interfaccia di gitaction.
+Il workflow `deploy.yml` viene eseguito automaticamente quando vengono apportate modifiche ai servizi, oppure da una modifica al file di deployment di kubernetes nella cartella `k8s-gke` o al workflow stesso. Altrimenti, può essere eseguito manualmente dall'interfaccia di gitaction.
 
 ```bash
- 1 git add api/preprocessing/recommender/ui_service
+ 1 git add api_service/preprocessing_service/recommender_service/ui_service
  2 git commit-m "Aggiornamento dei microservizi"
  3 git push origin google-cloud-project-main
 ``` 
 or
 ```bash
- 1 git add .github\workflow\deply.yml
+ 1 git add k8s-gke/**
+ 2 git commit-m "Aggiornamento dei file di deployment k8s""
+ 3 git push origin google-cloud-project-main
+``` 
+or 
+
+```bash
+ 1 git add .github/workflow/deploy.yml
  2 git commit-m "Modifica al workflow deploy.yml""
  3 git push origin google-cloud-project-main
 ``` 
 ### 3. Accesso al Cluster Kubernetes
-Dopo aver creato e configurato il cluster GKE, è possibile connettersi ad esso utilizzando il seguente comando:
-```bash
- gcloud container GCP_GKE_CLUSTER_NAME
- \--zone GCP_ZONE
- \--project GCP_PROJECT_ID
-```
-Sostituire GCP_GKE_CLUSTER_NAME, GCP_ZONE e GCP_PROJECT_ID con i valori appropriati del proprio ambiente.
-
-### 4. Configurazione del cluster Kubernetes
-
-Dopo il deployment, nel file bash `file-configuration.sh` nella porzione di codice 
+Dopo aver creato e configurato il cluster GKE, è possibile connettersi ad esso tramite la Google Cloud CLI, a condizione che l’ambiente locale sia correttamente configurato. Il comando da eseguire è il seguente:
 
 ```bash
-kubectl create secret docker-registry gcr-json-key-gke-$namespace \
-  --docker-server=GCP-REGION-docker.pkg.dev \
-  --docker-username=_json_key \
-  --docker-password="$(cat gcs-key.json)" \
-  --docker-email=tua@email.com \
-  --namespace=$namespace
-``` 
-modifica rispettivamente GCP-REGION e tua@email.com con la regione corretta di Google Cloud e l'indirizzo email personale per poi eseguire lo script con le modifiche apportate adeguatamente
+gcloud container clusters get-credentials GCP_GKE_CLUSTER_NAME \
+  --zone GCP_ZONE \
+  --project GCP_PROJECT_ID
 
-```bash
-chmod +x file-configuration.sh
-./file-configuration.sh
-```
+ ```
+Sostituire **GCP_GKE_CLUSTER_NAME**, **GCP_ZONE** e **GCP_PROJECT_ID** con i valori corrispondenti al proprio ambiente.
 
-### 5. Avvio pipeline per Argo e il Deployment dei Servizi
+In alternativa, è possibile accedere al cluster tramite `l’interfaccia grafica di Google Cloud`: selezionare il progetto desiderato, quindi navigare nella sezione `Kubernetes Engine` → `Cluster`, da cui è possibile visualizzare e gestire il cluster direttamente via UI.
 
-```bash
-chmod +x pipe-cloud-gke.sh
-./pipe-cloud-gke.sh
-```
 
 ## 🖥️ Utilizzo
 
 Una volta completato il deployment:
 
-1. Ottieni l'indirizzo IP esterno del servizio UI:
+1. Ottieni l'indirizzo IP esterno del servizio UI da configurazione locale:
    ```bash
    kubectl get service ui-service -n deployment
    ```
@@ -193,6 +181,10 @@ Una volta completato il deployment:
 4. **Accesso UI non funzionante**:
    - Verifica che il servizio abbia un IP esterno: `kubectl get service ui-service -n deployment`
    - Controlla i log UI: `kubectl logs deployment/ui-deployment -n deployment`
+
+5. **Configurione Locale non corretta**:
+    - Verificare che tutti i componenti siano installati correttamente. In particolare, un'installazione non corretta di `kubectl` potrebbe causare errori durante la connessione o l'interazione con il cluster.
+
 
 ## Autore
 
