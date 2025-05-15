@@ -20,7 +20,6 @@ env:
   DOCKER_EMAIL: ${{ secrets.DOCKER_EMAIL }}
   ARTIFACT_REPOSITORY: ${{ secrets.ARTIFACT_REPOSITORY }}
 
-
 jobs:
   upload-data:
     name: Upload Data to GCS
@@ -40,14 +39,12 @@ jobs:
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-    # Modify 
     - name: Upload data to GCS
       run: |
         echo "Contenuto della cartella data:"
         ls -la data/*
-        gsutil -m cp -r data/*.csv gs://${{ secrets.GCP_BUCKET_NAME }}/raw  
+        gsutil -m cp -r data/*.csv gs://${{ secrets.GCP_BUCKET_NAME }}/raw
         echo "Dati caricati con successo su gs://${{ secrets.GCP_BUCKET_NAME }}/raw"
-
 
   build-push-images:
     name: Build & Push Docker Images
@@ -72,22 +69,20 @@ jobs:
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-    - name: Configura Docker per Artifact Registry
+    - name: Configure Docker for Artifact Registry
       run: |
         gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
 
-    - name: Build e push image per ${{ matrix.service }}
+    - name: Build and push image for ${{ matrix.service }}
       run: |
-        echo "Building Docker image per ${{ matrix.service }}"
         cd ${{ matrix.service }}
         docker build -t ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:${{ github.sha }} .
         docker tag ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:${{ github.sha }} ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:latest
         docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:${{ github.sha }}
         docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/${{ matrix.service }}:latest
 
-  
   configure-gke:
-    name: Configure GKE
+    name: Configure GKE & Deploy Argo Workflow
     runs-on: ubuntu-latest
     needs: build-push-images
 
@@ -104,150 +99,99 @@ jobs:
       uses: google-github-actions/setup-gcloud@v2
       with:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
-      
-    - name: Install auth-plugin for kubectl
-      run:  gcloud components install gke-gcloud-auth-plugin
-    - name: Check plugin installation
-      run: gke-gcloud-auth-plugin --version
+
+    - name: Install GKE auth plugin
+      run: gcloud components install gke-gcloud-auth-plugin
+
     - name: Install kubectl
       run: gcloud components install kubectl --quiet
-    - name: Check kubectl installation
-      run: kubectl version --client
+
     - name: Get GKE credentials
       run: |
         gcloud container clusters get-credentials ${{ secrets.GCP_GKE_CLUSTER_NAME }} \
           --zone ${{ secrets.GCP_ZONE }} \
           --project ${{ secrets.GCP_PROJECT_ID }}
-    
-    - name: Create namespaces if not exist
+
+    - name: Create namespaces
       run: |
-        # Verifica se il namespace argo esiste, se non esiste lo crea
-        if ! kubectl get namespace argo &> /dev/null; then
-          kubectl create namespace argo
-          echo "Namespace argo creato"
-        else
-          echo "Namespace argo già esistente"
-        fi
-        
-        # Verifica se il namespace deployment esiste, se non esiste lo crea
-        if ! kubectl get namespace deployment &> /dev/null; then
-          kubectl create namespace deployment
-          echo "Namespace deployment creato"
-        else
-          echo "Namespace deployment già esistente"
-        fi   
-    - name: Install Argo-Workflow inside namespace 
+        kubectl get namespace argo || kubectl create namespace argo
+        kubectl get namespace deployment || kubectl create namespace deployment
+
+    - name: Install Argo Workflows
       run: |
         kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/download/v3.6.5/install.yaml
-    
-    - name: Decode GCP SA Key and prepare env file
+
+    - name: Decode GCP Service Account Key and .env
       run: |
         echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > ./gcs-key.json
         echo "${{ secrets.ENV_FILE }}" > .env
-    
-    
-    - name: Manage Docker Registry Secret for argo namespace
+
+    - name: Create Docker Registry Secret for argo
       run: |
-        # Elimina il secret se esiste già per aggiornarlo
-        kubectl delete secret docker-registry gcr-json-key-gke-argo -n argo --ignore-not-found
-        
-        # Crea il secret
+        kubectl delete secret gcr-json-key-gke-argo -n argo --ignore-not-found
         kubectl create secret docker-registry gcr-json-key-gke-argo \
-          --docker-server=$REGION-docker.pkg.dev \
+          --docker-server=${{ secrets.GCP_REGION }}-docker.pkg.dev \
           --docker-username=_json_key \
           --docker-password="$(cat gcs-key.json)" \
-          --docker-email=$DOCKER_EMAIL \
+          --docker-email=${{ secrets.DOCKER_EMAIL }} \
           --namespace=argo
-    
-    - name: Manage Docker Registry Secret for deployment namespace
+
+    - name: Create Docker Registry Secret for deployment
       run: |
-        # Elimina il secret se esiste già per aggiornarlo
-        kubectl delete secret docker-registry gcr-json-key-gke-deployment -n deployment --ignore-not-found
-        
-        # Crea il secret
+        kubectl delete secret gcr-json-key-gke-deployment -n deployment --ignore-not-found
         kubectl create secret docker-registry gcr-json-key-gke-deployment \
-          --docker-server=$REGION-docker.pkg.dev \
+          --docker-server=${{ secrets.GCP_REGION }}-docker.pkg.dev \
           --docker-username=_json_key \
           --docker-password="$(cat gcs-key.json)" \
-          --docker-email=$DOCKER_EMAIL \
+          --docker-email=${{ secrets.DOCKER_EMAIL }} \
           --namespace=deployment
 
-    - name: Manage GCS Key Secret for argo namespace
+    - name: Create GCS key secret for argo and deployment
       run: |
-        # Elimina il secret se esiste già per aggiornarlo
-        kubectl delete secret generic gcs-key-gke-argo -n argo --ignore-not-found
-        
-        # Crea il secret
-        kubectl create secret generic gcs-key-gke-argo \
-          --from-file=key.json=./gcs-key.json \
-          --namespace=argo
-    
-    - name: Manage GCS Key Secret for deployment namespace
+        kubectl delete secret gcs-key-gke-argo -n argo --ignore-not-found
+        kubectl create secret generic gcs-key-gke-argo --from-file=key.json=./gcs-key.json --namespace=argo
+
+        kubectl delete secret gcs-key-gke-deployment -n deployment --ignore-not-found
+        kubectl create secret generic gcs-key-gke-deployment --from-file=key.json=./gcs-key.json --namespace=deployment
+
+    - name: Create ConfigMaps
       run: |
-        # Elimina il secret se esiste già per aggiornarlo
-        kubectl delete secret generic gcs-key-gke-deployment -n deployment --ignore-not-found
-        
-        # Crea il secret
-        kubectl create secret generic gcs-key-gke-deployment \
-          --from-file=key.json=./gcs-key.json \
-          --namespace=deployment
-    
-    - name: Manage ConfigMap for argo namespace
-      run: |
-        # Elimina la configmap se esiste già per aggiornarla
         kubectl delete configmap service-config-gke-argo -n argo --ignore-not-found
-        
-        # Crea la configmap
-        kubectl create configmap service-config-gke-argo \
-          --from-env-file=.env \
-          --namespace=argo
-    
-    - name: Manage ConfigMap for deployment namespace
-      run: |
-        # Elimina la configmap se esiste già per aggiornarla
+        kubectl create configmap service-config-gke-argo --from-env-file=.env --namespace=argo
+
         kubectl delete configmap service-config-gke-deployment -n deployment --ignore-not-found
-        
-        # Crea la configmap
-        kubectl create configmap service-config-gke-deployment \
-          --from-env-file=.env \
-          --namespace=deployment
-    
+        kubectl create configmap service-config-gke-deployment --from-env-file=.env --namespace=deployment
+
     - name: Ensure RoleBinding for Argo
       run: |
-        # Verifica se il rolebinding esiste già
-        if ! kubectl get rolebinding default-admin -n argo &> /dev/null; then
-          echo "Creazione RoleBinding per Argo..."
-          kubectl create rolebinding default-admin \
-            --clusterrole=admin \
-            --serviceaccount=argo:default \
-            --namespace=argo
-        else
-          echo "RoleBinding per Argo già esistente"
-        fi
-    
-    - name: Setup Argo CLI 
+        kubectl get rolebinding default-admin -n argo || kubectl create rolebinding default-admin \
+          --clusterrole=admin \
+          --serviceaccount=argo:default \
+          --namespace=argo
+
+    - name: Install Argo CLI
       run: |
-          ARGO_VERSION="v3.6.5"
-          curl -sLO https://github.com/argoproj/argo-workflows/releases/download/${ARGO_VERSION}/argo-linux-amd64.gz
-          gunzip argo-linux-amd64.gz
-          chmod +x argo-linux-amd64
-          sudo mv argo-linux-amd64 /usr/local/bin/argo
-          argo version
-      
-    - name: Replace Variable in workflow
+        ARGO_VERSION="v3.6.5"
+        curl -sLO https://github.com/argoproj/argo-workflows/releases/download/${ARGO_VERSION}/argo-linux-amd64.gz
+        gunzip argo-linux-amd64.gz
+        chmod +x argo-linux-amd64
+        sudo mv argo-linux-amd64 /usr/local/bin/argo
+        argo version
+
+    - name: Replace Variables in Workflow YAML
       run: |
-         envsubst < job-test-cloud.yaml > job-test-cloud-2.yaml
-    - name: deploy-sequential-jobs-argo-workflow
+        export REGION=${{ secrets.GCP_REGION }}
+        export PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+        export ARTIFACT_REPOSITORY=${{ secrets.ARTIFACT_REPOSITORY }}
+        envsubst < k8s-gke/argoWorkflow/job-test-cloud.yaml > k8s-gke/argoWorkflow/job-test-cloud-2.yaml
+
+    - name: Submit Argo Workflow
       run: |
-        echo "Contenuto della cartella k8s-gke/argoWorkflow:"
-        ls -la k8s-gke/argoWorkflow/*
-        echo "Submitting Argo workflow..."
         argo submit k8s-gke/argoWorkflow/job-test-cloud-2.yaml -n argo --watch
-        
-    - name: Clean up sensitive files
+
+    - name: Clean Up Sensitive Files
       if: always()
       run: |
-        # Elimina i file con informazioni sensibili
         rm -f ./gcs-key.json
         rm -f .env
         echo "File sensibili eliminati"

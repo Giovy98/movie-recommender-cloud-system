@@ -44,7 +44,7 @@ spec:
 
     - name: compute
       container:
-        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}//recommender_service:latest
+        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/recommender_service:latest
         command: ["python"]
         args: ["recommender.py"]
         volumeMounts:
