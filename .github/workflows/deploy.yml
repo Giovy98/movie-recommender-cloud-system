@@ -15,6 +15,8 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: ${{ secrets.GCP_REGION }}
+  DOCKER_EMAIL: ${{ secrets.DOCKER_EMAIL }}
 
 jobs:
   upload-data:
@@ -113,12 +115,117 @@ jobs:
         gcloud container clusters get-credentials ${{ secrets.GCP_GKE_CLUSTER_NAME }} \
           --zone ${{ secrets.GCP_ZONE }} \
           --project ${{ secrets.GCP_PROJECT_ID }}
-
-    - name: Create and Check Kubernetes namespace
+    
+    - name: Create namespaces if not exist
       run: |
-        kubectl create namespace argo
-        kubectl get namespace argo 
-
+        # Verifica se il namespace argo esiste, se non esiste lo crea
+        if ! kubectl get namespace argo &> /dev/null; then
+          kubectl create namespace argo
+          echo "Namespace argo creato"
+        else
+          echo "Namespace argo già esistente"
+        fi
+        
+        # Verifica se il namespace deployment esiste, se non esiste lo crea
+        if ! kubectl get namespace deployment &> /dev/null; then
+          kubectl create namespace deployment
+          echo "Namespace deployment creato"
+        else
+          echo "Namespace deployment già esistente"
+        fi   
     - name: Install Argo-Workflow inside namespace 
       run: |
         kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/download/v3.6.5/install.yaml
+    
+    - name: Decode GCP SA Key and prepare env file
+      run: |
+        echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > ./gcs-key.json
+        echo "${{ secrets.ENV_FILE }}" > .env
+    
+    
+    - name: Manage Docker Registry Secret for argo namespace
+      run: |
+        # Elimina il secret se esiste già per aggiornarlo
+        kubectl delete secret docker-registry gcr-json-key-gke-argo -n argo --ignore-not-found
+        
+        # Crea il secret
+        kubectl create secret docker-registry gcr-json-key-gke-argo \
+          --docker-server=$REGION-docker.pkg.dev \
+          --docker-username=_json_key \
+          --docker-password="$(cat gcs-key.json)" \
+          --docker-email=$DOCKER_EMAIL \
+          --namespace=argo
+    
+    - name: Manage Docker Registry Secret for deployment namespace
+      run: |
+        # Elimina il secret se esiste già per aggiornarlo
+        kubectl delete secret docker-registry gcr-json-key-gke-deployment -n deployment --ignore-not-found
+        
+        # Crea il secret
+        kubectl create secret docker-registry gcr-json-key-gke-deployment \
+          --docker-server=$REGION-docker.pkg.dev \
+          --docker-username=_json_key \
+          --docker-password="$(cat gcs-key.json)" \
+          --docker-email=$DOCKER_EMAIL \
+          --namespace=deployment
+
+    - name: Manage GCS Key Secret for argo namespace
+      run: |
+        # Elimina il secret se esiste già per aggiornarlo
+        kubectl delete secret generic gcs-key-gke-argo -n argo --ignore-not-found
+        
+        # Crea il secret
+        kubectl create secret generic gcs-key-gke-argo \
+          --from-file=key.json=./gcs-key.json \
+          --namespace=argo
+    
+    - name: Manage GCS Key Secret for deployment namespace
+      run: |
+        # Elimina il secret se esiste già per aggiornarlo
+        kubectl delete secret generic gcs-key-gke-deployment -n deployment --ignore-not-found
+        
+        # Crea il secret
+        kubectl create secret generic gcs-key-gke-deployment \
+          --from-file=key.json=./gcs-key.json \
+          --namespace=deployment
+    
+    - name: Manage ConfigMap for argo namespace
+      run: |
+        # Elimina la configmap se esiste già per aggiornarla
+        kubectl delete configmap service-config-gke-argo -n argo --ignore-not-found
+        
+        # Crea la configmap
+        kubectl create configmap service-config-gke-argo \
+          --from-env-file=.env \
+          --namespace=argo
+    
+    - name: Manage ConfigMap for deployment namespace
+      run: |
+        # Elimina la configmap se esiste già per aggiornarla
+        kubectl delete configmap service-config-gke-deployment -n deployment --ignore-not-found
+        
+        # Crea la configmap
+        kubectl create configmap service-config-gke-deployment \
+          --from-env-file=.env \
+          --namespace=deployment
+    
+    - name: Ensure RoleBinding for Argo
+      run: |
+        # Verifica se il rolebinding esiste già
+        if ! kubectl get rolebinding default-admin -n argo &> /dev/null; then
+          echo "Creazione RoleBinding per Argo..."
+          kubectl create rolebinding default-admin \
+            --clusterrole=admin \
+            --serviceaccount=argo:default \
+            --namespace=argo
+        else
+          echo "RoleBinding per Argo già esistente"
+        fi
+        
+    - name: Clean up sensitive files
+      if: always()
+      run: |
+        # Elimina i file con informazioni sensibili
+        rm -f ./gcs-key.json
+        rm -f .env
+        echo "File sensibili eliminati"
