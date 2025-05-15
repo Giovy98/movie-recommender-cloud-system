@@ -222,10 +222,15 @@ jobs:
           echo "RoleBinding per Argo già esistente"
         fi
     
-    - name: Setup ArgoCD CLI 
-      uses: imajeetyadav/argocd-cli@v1
-      with:
-        version: v3.6.5
+    - name: Setup Argo CLI 
+      run: |
+          ARGO_VERSION="v3.6.5"
+          curl -sLO https://github.com/argoproj/argo-workflows/releases/download/${ARGO_VERSION}/argo-linux-amd64.gz
+          gunzip argo-linux-amd64.gz
+          chmod +x argo-linux-amd64
+          sudo mv argo-linux-amd64 /usr/local/bin/argo
+          argo version
+        
     - name: deploy-sequential-jobs-argo-workflow
       run: |
         echo "Contenuto della cartella k8s-gke/argoWorkflow:"
