@@ -189,8 +189,8 @@ jobs:
       - name: Apply Kubernetes manifests
         run: |
           echo "Deploying API and UI services..."
-          kubectl apply -f k8s-gke/deployment/k8s-cloud-api-2.yml
-          kubectl apply -f k8s-gke/deployment/k8s-cloud-ui-2.yml
+          kubectl apply -f k8s-gke/deployment/k8s-cloud-api-new.yml
+          kubectl apply -f k8s-gke/deployment/k8s-cloud-ui-new.yml
 
       - name: Clean Up Sensitive Files
         if: always()
