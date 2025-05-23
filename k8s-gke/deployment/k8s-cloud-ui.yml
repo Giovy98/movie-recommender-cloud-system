@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ui-deployment
+  namespace: deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ui
+  template:
+    metadata:
+      labels:
+        app: ui
+    spec:
+      containers:
+      - name: ui
+        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/ui_service:${GITHUB_SHA}
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"
+        ports:
+          - containerPort: 8501
+        volumeMounts:
+          - name: gcp-sa-key
+            mountPath: "/var/secrets"
+        envFrom:
+          - configMapRef:
+              name: service-config-gke-deployment
+        
+      imagePullSecrets:
+        - name: gcr-json-key-gke-deployment
+      volumes:
+        - name: gcp-sa-key
+          secret:
+            secretName: gcs-key-gke-deployment
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ui-service
+  namespace: deployment
+spec:
+  type: LoadBalancer
+  selector:
+    app: ui
+  ports:
+    - protocol: TCP
+      port: 8501
+      targetPort: 8501
+
+
+          

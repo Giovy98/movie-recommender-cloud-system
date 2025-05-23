@@ -1,0 +1,77 @@
+name: GCP Infrastructure Provisioning
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'terraform-gcp/**'
+      - '.github/workflows/infra.yml'
+
+env:
+  TF_VERSION: '1.5.0'
+  WORKING_DIR: './terraform-gcp'
+
+  # Variabili Terraform
+  TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+  TF_VAR_region: ${{ secrets.GCP_REGION }}
+  TF_VAR_bucket_name: ${{ secrets.GCP_BUCKET_NAME }}
+  TF_VAR_artifact_repository: ${{ secrets.ARTIFACT_REPOSITORY }}
+  TF_VAR_gke_sa_email: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+  TF_VAR_zone: ${{ secrets.GCP_ZONE }}
+  TF_VAR_gke_cluster_name: ${{ secrets.GCP_GKE_CLUSTER_NAME }}
+
+jobs:
+  provision-infrastructure:
+    name: Provision GCP Infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3 # Clona il repository nella macchina GitHub Runner.
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Set Terraform Cloud credentials 
+        run: |
+          mkdir -p ~/.terraform.d
+          echo '{"credentials":{"app.terraform.io":{"token":"${{ secrets.TFC_TOKEN }}"}}}' > ~/.terraform.d/credentials.tfrc.json
+
+      - name: Authenticate with GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.WORKING_DIR }}
+        run: terraform init -input=false # disabilita prompt interattivi
+
+      - name: Terraform Format
+        working-directory: ${{ env.WORKING_DIR }}
+        run: terraform fmt -recursive # Verifica e corregge il formato dei file Terraform in tutte le sottodirectory.
+
+      - name: Terraform Validate
+        working-directory: ${{ env.WORKING_DIR }}
+        run: terraform validate # Controlla la validità della configurazione Terraform (es. sintassi corretta).
+
+      - name: Terraform Plan
+        working-directory: ${{ env.WORKING_DIR }}
+        run: terraform plan -no-color # Genera un piano di esecuzione che mostra cosa verrà modificato.
+
+      - name: Terraform Apply
+        working-directory: ${{ env.WORKING_DIR }}
+        run: terraform apply -auto-approve # Applica automaticamente i cambiamenti all'infrastruttura (salta conderma interra).
+
+        
+        
+
+
+        
+        
+        
+
+
+        

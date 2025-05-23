@@ -1,0 +1,63 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: movie-recommender-pipeline-
+spec:
+  entrypoint: pipeline
+
+  volumes:
+    - name: gcp-sa-key
+      secret:
+        secretName: gcs-key-gke-argo
+
+  podSpecPatch: |
+    imagePullSecrets:
+      - name: gcr-json-key-gke-argo
+
+  templates:
+    - name: pipeline
+      steps:
+        - - name: preprocess-dataset
+            template: preprocess
+        - - name: compute-similarity
+            template: compute
+
+    - name: preprocess
+      container:
+        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/preprocessing_service:${GITHUB_SHA}
+        command: ["python"]
+        args: ["preprocessing.py"]
+        volumeMounts:
+          - name: gcp-sa-key
+            mountPath: "/var/secrets"
+            readOnly: true
+        envFrom:
+          - configMapRef:
+              name: service-config-gke-argo
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"
+
+    - name: compute
+      container:
+        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/recommender_service:${GITHUB_SHA}
+        command: ["python"]
+        args: ["recommender.py"]
+        volumeMounts:
+          - name: gcp-sa-key
+            mountPath: "/var/secrets"
+            readOnly: true
+        envFrom:
+          - configMapRef:
+              name: service-config-gke-argo
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
