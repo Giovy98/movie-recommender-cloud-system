@@ -90,7 +90,7 @@ def preprocessing():
     finally:
         os.remove(tmp_file_path)
 
-    logging.info("==== FINE PREPROCESSING ====")
+    logging.info("==== FINE PREPROCESSING! ====")
 
 if __name__ == '__main__':
     preprocessing()
