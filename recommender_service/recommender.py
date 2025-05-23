@@ -50,7 +50,7 @@ def compute_similarity_matrix(tags_series):
     return cosine_similarity(matrix)
 
 def upload_to_gcs(bucket, data, destination_blob):
-    logging.info("5°: Salvataggio della matrice di similarità su GCS")
+    logging.info("5°: Salvataggio della matrice di similarità su GCS!")
     tmp_file_path = None
 
     try:
