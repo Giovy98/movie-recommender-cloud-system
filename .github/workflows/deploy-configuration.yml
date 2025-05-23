@@ -4,12 +4,10 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - feature/google-cloud-project-exam
+      - main
     paths:
       - 'preprocessing_service/**'
       - 'recommender_service/**'
-      - '.github/workflows/deploy-configuration.yml'
-      - 'k8s-gke/argoWorkflow/**'
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -41,9 +39,6 @@ jobs:
             - 'preprocessing_service/**'
           recommender_service:
             - 'recommender_service/**'
-          workflow:
-            - '.github/workflows/deploy-configuration.yml'
-            - 'k8s-gke/argoWorkflow/**'
 
   upload-data:
     name: Upload Data to GCS
