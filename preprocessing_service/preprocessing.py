@@ -60,7 +60,7 @@ def preprocessing():
     logging.info("2°: Merging dei due dataset!")
     movies_full = movies.merge(credits, on='title')
 
-    logging.info("3°: - Pulizia e trasformazione dati -")
+    logging.info("3°: - Pulizia e trasformazione dati! -")
     movies_full = movies_full[['movie_id', 'title', 'overview', 'genres', 'keywords', 'cast', 'crew']]
     movies_full.dropna(inplace=True)
 
