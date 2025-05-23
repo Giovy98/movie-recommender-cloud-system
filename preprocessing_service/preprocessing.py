@@ -57,7 +57,7 @@ def preprocessing():
     movies = download_csv_to_df(bucket, MOVIES_BLOB)
     credits = download_csv_to_df(bucket, CREDITS_BLOB)
 
-    logging.info("2°: Merging dei due dataset!")
+    logging.info("2°: Merging dei due dataset")
     movies_full = movies.merge(credits, on='title')
 
     logging.info("3°: Pulizia e trasformazione dati")
