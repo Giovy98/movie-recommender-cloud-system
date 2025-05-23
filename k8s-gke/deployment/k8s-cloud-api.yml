@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/api_service:${GITHUB_SHA}
+          image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/api_service:latest
           ports:
             - containerPort: 8000
           resources:
