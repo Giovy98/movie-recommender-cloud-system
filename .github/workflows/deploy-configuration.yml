@@ -8,6 +8,7 @@ on:
     paths:
       - 'preprocessing_service/**'
       - 'recommender_service/**'
+      - 'k8s-gke/argoWorkflow/**'
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
