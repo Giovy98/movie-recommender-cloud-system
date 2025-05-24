@@ -46,7 +46,7 @@ def compute_similarity_matrix(tags_series):
     logging.info("3°: Trasformazione del dataset in matrice di feature")
     matrix = cv.fit_transform(tags_series.fillna('')).toarray()
 
-    logging.info("4°: Calcolo della similarità coseno")
+    logging.info("4°: Calcolo della matrice della similarità coseno")
     return cosine_similarity(matrix)
 
 def upload_to_gcs(bucket, data, destination_blob):
