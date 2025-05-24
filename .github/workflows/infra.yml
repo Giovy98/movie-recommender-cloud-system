@@ -15,7 +15,6 @@ env:
   TF_VAR_region: ${{ secrets.GCP_REGION }}
   TF_VAR_bucket_name: ${{ secrets.GCP_BUCKET_NAME }}
   TF_VAR_artifact_repository: ${{ secrets.ARTIFACT_REPOSITORY }}
-  TF_VAR_gke_sa_email: ${{ secrets.GCP_SERVICE_ACCOUNT }}
   TF_VAR_zone: ${{ secrets.GCP_ZONE }}
   TF_VAR_gke_cluster_name: ${{ secrets.GCP_GKE_CLUSTER_NAME }}
 

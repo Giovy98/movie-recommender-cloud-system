@@ -16,14 +16,12 @@ env:
   ARTIFACT_REPOSITORY: ${{ secrets.ARTIFACT_REPOSITORY }}
 
 jobs:
-  # Job per rilevare i cambiamenti
-  detect-changes:
+  detect-changes: # Rileva i cambiamenti nei servizi
     name: Detect Service Changes
     runs-on: ubuntu-latest
     outputs:
       preprocessing_changed: ${{ steps.changes.outputs.preprocessing_service }}
       recommender_changed: ${{ steps.changes.outputs.recommender_service }}
-      workflow_changed: ${{ steps.changes.outputs.workflow }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -41,7 +39,7 @@ jobs:
               - 'recommender_service/**'
           base: feature/google-cloud-gke
 
-  upload-data:
+  upload-data: # Upload data to GCS
     name: Upload Data to GCS
     runs-on: ubuntu-latest
     needs: detect-changes
@@ -79,8 +77,8 @@ jobs:
           gsutil -m cp -r data/*.csv gs://${{ secrets.GCP_BUCKET_NAME }}/raw
           echo "Dati caricati con successo su gs://${{ secrets.GCP_BUCKET_NAME }}/raw"
 
-  # Job separati per ogni servizio
-  build-push-preprocessing:
+
+  build-push-preprocessing: # Build & Push Preprocessing Service
     name: Build & Push Preprocessing Service
     runs-on: ubuntu-latest
     needs: [upload-data, detect-changes]
@@ -113,7 +111,7 @@ jobs:
           docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/preprocessing_service:latest
           echo "Preprocessing service built and pushed successfully"
 
-  build-push-recommender:
+  build-push-recommender: # Build & Push Recommender Service
     name: Build & Push Recommender Service
     runs-on: ubuntu-latest
     needs: [upload-data, detect-changes]
@@ -235,7 +233,6 @@ jobs:
           export REGION=${{ secrets.GCP_REGION }}
           export PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
           export ARTIFACT_REPOSITORY=${{ secrets.ARTIFACT_REPOSITORY }}
-          export GITHUB_SHA=${{ github.sha }}
           envsubst < k8s-gke/argoWorkflow/job-test-cloud.yaml > k8s-gke/argoWorkflow/job-test-cloud-new.yaml
 
       - name: Show which services were built

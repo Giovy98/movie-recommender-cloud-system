@@ -16,8 +16,7 @@ env:
   ARTIFACT_REPOSITORY: ${{ secrets.ARTIFACT_REPOSITORY }}
 
 jobs:
-  # Job per rilevare i cambiamenti
-  detect-changes:
+  detect-changes: # Rileva i cambiamenti nei servizi
     name: Detect Service Changes
     runs-on: ubuntu-latest
     outputs:
@@ -41,8 +40,8 @@ jobs:
               - 'ui_service/**'
           base: feature/google-cloud-gke
 
-  # Job separati per ogni servizio
-  build-push-api:
+  
+  build-push-api: # Build & Push api_service Service
     name: Build & Push api_service Service
     runs-on: ubuntu-latest
     needs: [detect-changes]
@@ -75,7 +74,7 @@ jobs:
           docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/api_service:latest
           echo "api service built and pushed successfully"
 
-  build-push-ui:
+  build-push-ui: # Build & Push ui_service Service
     name: Build & Push Ui Service 
     runs-on: ubuntu-latest
     needs: [detect-changes]
@@ -108,7 +107,7 @@ jobs:
           docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/ui_service:latest
           echo "UI service built and pushed successfully"
     
-  deploy-gke:
+  deploy-gke: # Deploy Services to GKE
     name: Deploy Services to GKE
     runs-on: ubuntu-latest
     needs: [detect-changes, build-push-api, build-push-ui]
