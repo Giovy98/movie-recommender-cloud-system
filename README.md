@@ -2,7 +2,8 @@
 
 Questo progetto implementa un sistema di raccomandazione content-based di film  su GCP (Google Cloud Platform), utilizzando Kubernetes (GKE) per l'orchestrazione dei container, Terraform per il provisioning dell'infrastruttura e Argo Workflows per la gestione di job sequenziali.
 
-![cloud-based-gcp-rcsys-1](https://github.com/user-attachments/assets/af9369cf-41db-41ad-866d-6ce1f4eec34b)
+![cloud-based-gcp-rcsys drawio](https://github.com/user-attachments/assets/b9d69041-d75c-4ed2-b056-83f24aca89e0)
+
 
 ## 📋 Indice
 
@@ -75,7 +76,6 @@ Configura i seguenti segreti nel tuo repository GitHub:
 - `GCP_REGION`: Regione GCP (es. europe-west1)
 - `GCP_ZONE`: Zona GCP (es. europe-west1-b)
 - `GCP_BUCKET_NAME`: Nome del bucket GCS
-- `GCP_SERVICE_ACCOUNT`: Email del service account
 - `GCP_SA_KEY`: JSON della chiave del service account (base64 encoded)
 - `ARTIFACT_REPOSITORY`: Nome del repository Artifact Registry
 - `GCP_GKE_CLUSTER_NAME`: Nome del cluster GKE
@@ -108,19 +108,11 @@ git commit -m "Modifiche alla configurazione Terraform"
 git push origin google-cloud-project-main
 ```
 
-oppure
-
-```bash
-git add .github/workflows/infra.yml
-git commit -m "Aggiornamento del workflow infra.yml"
-git push origin google-cloud-project-main
-```
-
 ### 2. Deployment dei servizi
 
 #### Preprocessing e Recommender (ArgoWorkflow)
 
-Il workflow `deploy-configuration.yml` viene eseguito automaticamente quando vengono apportate modifiche ai servizi `preprocessing_service` o `recommender_service`, oppure da una modifica al file di deployment di Kubernetes nella cartella `k8s-gke/argoWorkflow` o al workflow stesso. Altrimenti, può essere eseguito manualmente dall'interfaccia di GitHub Actions.
+Il workflow `deploy-configuration.yml` viene eseguito automaticamente quando vengono apportate modifiche ai servizi `preprocessing_service` o `recommender_service`, oppure da una modifica al file di deployment di Kubernetes nella cartella `k8s-gke/argoWorkflow`. Altrimenti, può essere eseguito manualmente dall'interfaccia di GitHub Actions.
 
 ```bash
 git add preprocessing_service/ recommender_service/
@@ -133,14 +125,6 @@ oppure
 ```bash
 git add k8s-gke/argoWorkflow/
 git commit -m "Aggiornamento dei file di deployment di k8s su argoworkflow"
-git push origin google-cloud-project-main
-```
-
-oppure
-
-```bash
-git add .github/workflows/deploy-configuration.yml
-git commit -m "Modifica al workflow deploy-configuration.yml"
 git push origin google-cloud-project-main
 ```
 
@@ -158,14 +142,6 @@ oppure
 ```bash
 git add  k8s-gke/deployment/
 git commit -m "Aggiornamento dei file di deployment di k8s per API e UI"
-git push origin google-cloud-project-main
-```
-
-oppure 
-
-```bash
-git add  .github/workflows/deploy-application.yml
-git commit -m "Modifica al workflow deploy-application.yml"
 git push origin google-cloud-project-main
 ```
 
