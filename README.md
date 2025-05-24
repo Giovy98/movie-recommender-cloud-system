@@ -96,6 +96,25 @@ Configura i seguenti segreti nel tuo repository GitHub:
 
 2. Crea e scarica una chiave JSON e salvala come `gcs-key.json` nella root del progetto.
 
+### 4. Terraform Remote State
+Per utilizzare **Terraform Cloud** come backend remoto, si segui questi passaggi:
+1. Crea un'organizzazione su Terraform Cloud
+2. All'interno dell'organizzazione, crea un **workspace** dedicato al progetto
+3. Configura il backend remoto nel file `provider.tf`, situato nella directory `terraform-gcp`, con il seguente blocco:
+
+```hcl
+terraform {
+  backend "remote" {
+    hostname     = "app.terraform.io"
+    organization = "<ORG_NAME>"
+    workspaces {
+      name = "<WORKSPACE_NAME>"
+    }
+  }
+}
+```
+sostituisci <ORG_NAME> e <WORKSPACE_NAME> con il nome della tua organizzazione e del workspace configurato su Terraform Cloud.
+
 ## 🚀 Deployment
 
 ### 1. Provisioning dell'infrastruttura
