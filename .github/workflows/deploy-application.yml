@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - feature/google-cloud-gke
+      - main
     paths:
       - 'api_service/**'
       - 'ui_service/**'
