@@ -41,7 +41,7 @@ def get_recommendations(movie_title: str):
 # === Interfaccia Streamlit ===
 def main():
     st.set_page_config(page_title="Movie Recommender", layout="centered")
-    st.title("🎬 Sistema di Raccomandazione di film Bellissimo!")
+    st.title("🎬 Sistema di Raccomandazione di film Maestoso!")
 
     movie_list = load_movies_from_gcs()
 
