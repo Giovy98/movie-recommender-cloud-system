@@ -23,7 +23,7 @@ def init_gcs_client():
     try:
         return storage.Client.from_service_account_json(GCS_KEY_PATH)
     except Exception as e:
-        logging.error(f"Attenzione, errore durante l'autenticazione con GCS: {e}")
+        logging.error(f"Attenzione, errore durante l'autenticazione con GCS!: {e}")
         raise
 
 def load_dataset(bucket):

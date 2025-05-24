@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - feature/google-cloud-prokect-v2
+      - feature/google-cloud-project-v2
     paths:
       - 'preprocessing_service/**'
       - 'recommender_service/**'
