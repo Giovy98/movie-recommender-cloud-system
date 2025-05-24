@@ -13,6 +13,7 @@ spec:
   podSpecPatch: |
     imagePullSecrets:
       - name: gcr-json-key-gke-argo
+    imagePullPolicy: Always
 
   templates:
     - name: pipeline
