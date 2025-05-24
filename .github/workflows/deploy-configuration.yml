@@ -39,7 +39,7 @@ jobs:
               - 'preprocessing_service/**'
             recommender_service:
               - 'recommender_service/**'
-          base: feature/google-cloud-gke
+          base: feature/google-cloud-project-v2
 
   upload-data:
     name: Upload Data to GCS
