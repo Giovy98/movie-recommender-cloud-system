@@ -75,7 +75,7 @@ def recommend(movie: str):
     movie_title_map = {title.lower(): title for title in movies['title'].values}
 
     if movie_lower not in movie_title_map:
-        raise HTTPException(status_code=404, detail="🎥 Film non trovato nel dataset.")
+        raise HTTPException(status_code=404, detail="🎥 Film non trovato nel dataset!.")
 
     actual_title = movie_title_map[movie_lower]
     idx = movies[movies['title'] == actual_title].index[0]
