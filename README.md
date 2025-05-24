@@ -105,7 +105,7 @@ Il workflow `infra.yml` viene eseguito automaticamente quando vengono apportate 
 ```bash
 git add terraform-gcp
 git commit -m "Modifiche alla configurazione Terraform"
-git push origin google-cloud-project-main
+git push origin main
 ```
 
 ### 2. Deployment dei servizi
@@ -117,7 +117,7 @@ Il workflow `deploy-configuration.yml` viene eseguito automaticamente quando ven
 ```bash
 git add preprocessing_service/ recommender_service/
 git commit -m "Aggiornamento dei microservizi"
-git push origin google-cloud-project-main
+git push origin main
 ```
 
 oppure
@@ -125,7 +125,7 @@ oppure
 ```bash
 git add k8s-gke/argoWorkflow/
 git commit -m "Aggiornamento dei file di deployment di k8s su argoworkflow"
-git push origin google-cloud-project-main
+git push origin main
 ```
 
 #### API e UI Services
@@ -135,14 +135,14 @@ Il workflow `deploy-application.yml` viene eseguito automaticamente quando vengo
 ```bash
 git add api_service/ ui_service/
 git commit -m "Aggiornamento dei servizi API e UI"
-git push origin google-cloud-project-main
+git push origin main
 ```
 oppure
 
 ```bash
 git add  k8s-gke/deployment/
 git commit -m "Aggiornamento dei file di deployment di k8s per API e UI"
-git push origin google-cloud-project-main
+git push origin main
 ```
 
 ### 3. Accesso al Cluster Kubernetes
@@ -170,8 +170,9 @@ Una volta completato il deployment:
    oppure direttamente nella sezione **Gateway, servizi e Ingress** di GKE
 
 2. Accedi all'interfaccia web tramite browser all'indirizzo `http://<EXTERNAL-IP>:8501`
+   - **EXTERNAL-IP**: corrisponde all’indirizzo IP esterno assegnato dal Load Balancer o da altra configurazione di rete.
 
-3. Seleziona un film e ricevi raccomandazioni!
+4. Seleziona un film e ricevi raccomandazioni!
 
 ## ❓ Troubleshooting
 
