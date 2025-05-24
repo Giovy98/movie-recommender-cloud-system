@@ -16,3 +16,4 @@ resource "google_storage_bucket_object" "folders" {
   bucket   = google_storage_bucket.data_bucket.name
   content  = " "
 }
+

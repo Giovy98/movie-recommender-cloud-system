@@ -24,7 +24,7 @@ spec:
 
     - name: preprocess
       container:
-        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/preprocessing_service:${GITHUB_SHA}
+        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/preprocessing_service:latest
         command: ["python"]
         args: ["preprocessing.py"]
         volumeMounts:
@@ -44,7 +44,7 @@ spec:
 
     - name: compute
       container:
-        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/recommender_service:${GITHUB_SHA}
+        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/recommender_service:latest
         command: ["python"]
         args: ["recommender.py"]
         volumeMounts:

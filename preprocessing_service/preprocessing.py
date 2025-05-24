@@ -53,14 +53,14 @@ def preprocessing():
     storage_client = init_gcs_client()
     bucket = storage_client.bucket(BUCKET_NAME)
 
-    logging.info("1°: Caricamento Dataset dal bucket GCS")
+    logging.info("1°: Caricamento Dataset dal bucket GCS!")
     movies = download_csv_to_df(bucket, MOVIES_BLOB)
     credits = download_csv_to_df(bucket, CREDITS_BLOB)
 
-    logging.info("2°: Merging dei due dataset")
+    logging.info("2°: Merging dei due dataset!")
     movies_full = movies.merge(credits, on='title')
 
-    logging.info("3°: Pulizia e trasformazione dati")
+    logging.info("3°: - Pulizia e trasformazione dati! -")
     movies_full = movies_full[['movie_id', 'title', 'overview', 'genres', 'keywords', 'cast', 'crew']]
     movies_full.dropna(inplace=True)
 
@@ -90,7 +90,7 @@ def preprocessing():
     finally:
         os.remove(tmp_file_path)
 
-    logging.info("==== FINE PREPROCESSING ====")
+    logging.info("==== FINE PREPROCESSING! ====")
 
 if __name__ == '__main__':
     preprocessing()

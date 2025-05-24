@@ -21,7 +21,7 @@ MODEL_BLOB = os.getenv("GCS_MODEL_BLOB")
 
 
 
-app = FastAPI(title="Movie Recommendation API", version="1.0.0")
+app = FastAPI(title="Movie Recommendation API!", version="1.0.0")
 
 # === Google Cloud Storage Setup ===
 @lru_cache()
@@ -31,7 +31,7 @@ def get_gcs_bucket():
         return client.bucket(BUCKET_NAME)
     except Exception as e:
         logging.error(f"Errore inizializzazione client GCS: {e}")
-        raise RuntimeError("Impossibile inizializzare il client GCS")
+        raise RuntimeError("Impossibile inizializzare il client GCS!")
 
 # === Caricamento dati e modello con cache ===
 @lru_cache()

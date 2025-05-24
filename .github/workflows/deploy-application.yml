@@ -1,0 +1,199 @@
+name: GCP Deploy Application
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/google-cloud-gke
+    paths:
+      - 'api_service/**'
+      - 'ui_service/**'
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: ${{ secrets.GCP_REGION }}
+  DOCKER_EMAIL: ${{ secrets.DOCKER_EMAIL }}
+  ARTIFACT_REPOSITORY: ${{ secrets.ARTIFACT_REPOSITORY }}
+
+jobs:
+  detect-changes: # Rileva i cambiamenti nei servizi
+    name: Detect Service Changes
+    runs-on: ubuntu-latest
+    outputs:
+      api_changed: ${{ steps.changes.outputs.api_service }}
+      ui_changed: ${{ steps.changes.outputs.ui_service }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2  # Necessario per il confronto
+      
+      - name: Check for changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            api_service:
+              - 'api_service/**'
+            ui_service:
+              - 'ui_service/**'
+          base: feature/google-cloud-gke
+
+  
+  build-push-api: # Build & Push api_service Service
+    name: Build & Push api_service Service
+    runs-on: ubuntu-latest
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.api_changed == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Google Auth
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push api_service service
+        run: |
+          cd api_service
+          echo "Building api_service..."
+          docker build -t ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/api_service:${{ github.sha }} .
+          docker tag ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/api_service:${{ github.sha }} ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/api_service:latest
+          docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/api_service:${{ github.sha }}
+          docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/api_service:latest
+          echo "api service built and pushed successfully"
+
+  build-push-ui: # Build & Push ui_service Service
+    name: Build & Push Ui Service 
+    runs-on: ubuntu-latest
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.ui_changed == 'true'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Google Auth
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push ui service
+        run: |
+          cd ui_service
+          echo "Building ui_service..."
+          docker build -t ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/ui_service:${{ github.sha }} .
+          docker tag ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/ui_service:${{ github.sha }} ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/ui_service:latest
+          docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/ui_service:${{ github.sha }}
+          docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/ui_service:latest
+          echo "UI service built and pushed successfully"
+    
+  deploy-gke: # Deploy Services to GKE
+    name: Deploy Services to GKE
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-push-api, build-push-ui]
+    # Esegui solo se almeno un servizio è cambiato
+    if: |
+      always() && 
+      (needs.detect-changes.outputs.api_changed == 'true' || 
+       needs.detect-changes.outputs.ui_changed == 'true')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Google Auth
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Install GKE auth plugin
+        run: gcloud components install gke-gcloud-auth-plugin
+
+      - name: Install kubectl
+        run: gcloud components install kubectl --quiet
+
+      - name: Get GKE credentials
+        run: |
+          gcloud container clusters get-credentials ${{ secrets.GCP_GKE_CLUSTER_NAME }} \
+            --zone ${{ secrets.GCP_ZONE }} \
+            --project ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Create deployment namespaces
+        run: |
+          kubectl get namespace deployment || kubectl create namespace deployment
+
+      - name: Decode GCP Service Account Key and .env
+        run: |
+          echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > ./gcs-key.json
+          echo "${{ secrets.ENV_FILE }}" > .env
+
+      - name: Create Docker Registry Secret
+        run: |
+          kubectl delete secret gcr-json-key-gke-deployment -n deployment --ignore-not-found
+          kubectl create secret docker-registry gcr-json-key-gke-deployment \
+            --docker-server=${{ secrets.GCP_REGION }}-docker.pkg.dev \
+            --docker-username=_json_key \
+            --docker-password="$(cat gcs-key.json)" \
+            --docker-email=${{ secrets.DOCKER_EMAIL }} \
+            --namespace=deployment
+
+      - name: Create GCS key secret
+        run: |
+          kubectl delete secret gcs-key-gke-deployment -n deployment --ignore-not-found
+          kubectl create secret generic gcs-key-gke-deployment \
+            --from-file=key.json=./gcs-key.json \
+            --namespace=deployment
+
+      - name: Create ConfigMap from .env
+        run: |
+          kubectl delete configmap service-config-gke-deployment -n deployment --ignore-not-found
+          kubectl create configmap service-config-gke-deployment \
+            --from-env-file=.env \
+            --namespace=deployment
+
+      - name: Replace Variables in Kubernetes YAMLs
+        run: |
+          export REGION=${{ secrets.GCP_REGION }}
+          export PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+          export ARTIFACT_REPOSITORY=${{ secrets.ARTIFACT_REPOSITORY }}
+          export GITHUB_SHA=${{ github.sha }}
+
+          envsubst < k8s-gke/deployment/k8s-cloud-api.yml > k8s-gke/deployment/k8s-cloud-api-new.yml
+          envsubst < k8s-gke/deployment/k8s-cloud-ui.yml > k8s-gke/deployment/k8s-cloud-ui-new.yml
+
+      - name: Apply Kubernetes manifests
+        run: |
+          echo "Deploying API and UI services..."
+          kubectl apply -f k8s-gke/deployment/k8s-cloud-api-new.yml
+          kubectl apply -f k8s-gke/deployment/k8s-cloud-ui-new.yml
+
+      - name: Clean Up Sensitive Files
+        if: always()
+        run: |
+          rm -f ./gcs-key.json
+          rm -f .env
+          echo "File sensibili eliminati"
