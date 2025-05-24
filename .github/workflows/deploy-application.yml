@@ -1,4 +1,4 @@
-name: GCP Deploy, Data Upload & GKE Configuration
+name: GCP Deploy Application
 
 on:
   workflow_dispatch:
