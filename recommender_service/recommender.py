@@ -33,7 +33,7 @@ def load_dataset(bucket):
         df_bytes = blob.download_as_bytes()
         df = pd.read_csv(pd.io.common.BytesIO(df_bytes))
         if 'tags' not in df.columns:
-            raise ValueError("La colonna 'tags' non è presente nel dataset..")
+            raise ValueError("La colonna 'tags' non è presente nel dataset")
         return df
     except Exception as e:
         logging.error(f"Errore nel caricamento del dataset: {e}")
