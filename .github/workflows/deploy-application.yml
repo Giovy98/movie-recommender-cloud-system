@@ -8,7 +8,8 @@ on:
     paths:
       - 'api_service/**'
       - 'ui_service/**'
-
+      - 'k8s-gke/deployment/**'
+      
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: ${{ secrets.GCP_REGION }}
