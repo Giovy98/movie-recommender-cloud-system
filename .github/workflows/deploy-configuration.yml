@@ -1,7 +1,10 @@
 name: GCP Deploy, Data Upload & GKE Configuration
 
 on:
-  workflow_dispatch:
+  workflow_run:
+    workflows: ["GCP Infrastructure Provisioning"]
+    types:
+      - completed
   push:
     branches:
       - feature/google-cloud-gke

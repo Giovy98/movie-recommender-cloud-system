@@ -1,7 +1,10 @@
 name: GCP Deploy Application
 
 on:
-  workflow_dispatch:
+  workflow_run:
+    workflows: ["GCP Deploy, Data Upload & GKE Configuration"]
+    types:
+      - completed
   push:
     branches:
       - feature/google-cloud-gke
