@@ -27,7 +27,7 @@ def init_gcs_client():
         raise
 
 def load_dataset(bucket):
-    logging.info("1°: Caricamento del dataset dal bucket GCS")
+    logging.info("1°: Caricamento del dataset dal bucket GCS!")
     try:
         blob = bucket.blob(DATA_BLOB)
         df_bytes = blob.download_as_bytes()

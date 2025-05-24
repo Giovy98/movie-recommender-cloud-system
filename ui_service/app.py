@@ -46,7 +46,7 @@ def main():
     movie_list = load_movies_from_gcs()
 
     if not movie_list:
-        st.warning("❌ Nessun film trovato nel dataset... Riprova con un altro film.")
+        st.warning("❌ Nessun film trovato nel dataset... Riprova con un altro film!.")
         return
 
     selected_movie = st.selectbox("🎞️ Seleziona un film tra quelli disponibili:", movie_list)
