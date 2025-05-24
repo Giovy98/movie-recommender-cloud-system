@@ -36,7 +36,7 @@ def load_dataset(bucket):
             raise ValueError("La colonna 'tags' non è presente nel dataset..")
         return df
     except Exception as e:
-        logging.error(f"Errore nel caricamento del dataset: {e}")
+        logging.error(f"Errore nel caricamento del dataset!: {e}")
         raise
 
 def compute_similarity_matrix(tags_series):
