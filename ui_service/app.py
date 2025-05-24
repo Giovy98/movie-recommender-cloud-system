@@ -35,7 +35,7 @@ def get_recommendations(movie_title: str):
         response.raise_for_status() # Controlla se la risposta è OK
         return response.json()["recommendations"]
     except requests.exceptions.RequestException as e:
-        st.error(f"--Errore durante la richiesta all'API--: {e}")
+        st.error(f"Errore durante la richiesta all'API: {e}")
         return None
 
 # === Interfaccia Streamlit ===
