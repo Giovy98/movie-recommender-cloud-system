@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: ui
-        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/ui_service:latest
+        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/ui_service:${GITHUB_SHA}
         imagePullPolicy: Always
         resources:
           requests:
