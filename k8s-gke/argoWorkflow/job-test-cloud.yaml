@@ -1,64 +1,463 @@
-apiVersion: argoproj.io/v1alpha1
-kind: Workflow
-metadata:
-  generateName: movie-recommender-pipeline-
-spec:
-  entrypoint: pipeline
+name: GCP Deploy, Data Upload & GKE Configuration
 
-  volumes:
-    - name: gcp-sa-key
-      secret:
-        secretName: gcs-key-gke-argo
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/google-cloud-project-v2
+    paths:
+      - 'preprocessing_service/**'
+      - 'recommender_service/**'
 
-  podSpecPatch: |
-    imagePullSecrets:
-      - name: gcr-json-key-gke-argo
-    imagePullPolicy: Always
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: ${{ secrets.GCP_REGION }}
+  DOCKER_EMAIL: ${{ secrets.DOCKER_EMAIL }}
+  ARTIFACT_REPOSITORY: ${{ secrets.ARTIFACT_REPOSITORY }}
 
-  templates:
-    - name: pipeline
-      steps:
-        - - name: preprocess-dataset
-            template: preprocess
-        - - name: compute-similarity
-            template: compute
+jobs:
+  # Job per rilevare i cambiamenti
+  detect-changes:
+    name: Detect Service Changes
+    runs-on: ubuntu-latest
+    outputs:
+      preprocessing_changed: ${{ steps.changes.outputs.preprocessing_service }}
+      recommender_changed: ${{ steps.changes.outputs.recommender_service }}
+      workflow_changed: ${{ steps.changes.outputs.workflow }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 2  # Necessario per il confronto
+      
+      - name: Check for changes
+        uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            preprocessing_service:
+              - 'preprocessing_service/**'
+            recommender_service:
+              - 'recommender_service/**'
+          base: feature/google-cloud-project-v2
 
-    - name: preprocess
-      container:
-        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/preprocessing_service:${GITHUB_SHA}
-        command: ["python"]
-        args: ["preprocessing.py"]
-        volumeMounts:
-          - name: gcp-sa-key
-            mountPath: "/var/secrets"
-            readOnly: true
-        envFrom:
-          - configMapRef:
-              name: service-config-gke-argo
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "1000m"
+  upload-data:
+    name: Upload Data to GCS
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    - name: compute
-      container:
-        image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/recommender_service:${GITHUB_SHA}
-        command: ["python"]
-        args: ["recommender.py"]
-        volumeMounts:
-          - name: gcp-sa-key
-            mountPath: "/var/secrets"
-            readOnly: true
-        envFrom:
-          - configMapRef:
-              name: service-config-gke-argo
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "500m"
-          limits:
-            memory: "1Gi"
-            cpu: "1000m"
+      - name: Google Auth
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Check if data already exists in GCS
+        id: check_data
+        run: |
+          echo "Controllo presenza dati in: gs://${{ secrets.GCP_BUCKET_NAME }}/raw/"
+          if gsutil -q stat gs://${{ secrets.GCP_BUCKET_NAME }}/raw/*.csv; then
+            echo "I dati esistono già. Upload non necessario."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Dati non trovati. Procedo con l'upload."
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload data to GCS
+        if: steps.check_data.outputs.skip == 'false'
+        run: |
+          echo "Contenuto della cartella data:"
+          ls -la data/*
+          gsutil -m cp -r data/*.csv gs://${{ secrets.GCP_BUCKET_NAME }}/raw
+          echo "Dati caricati con successo su gs://${{ secrets.GCP_BUCKET_NAME }}/raw"
+
+  # Job build preprocessing service
+  build-push-preprocessing:
+    name: Build & Push Preprocessing Service
+    runs-on: ubuntu-latest
+    needs: [upload-data, detect-changes]
+    if: needs.detect-changes.outputs.preprocessing_changed == 'true'
+    outputs:
+      image_tag: ${{ steps.build_info.outputs.tag }}
+      image_digest: ${{ steps.build_push.outputs.digest }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Google Auth
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Generate unique tag
+        id: build_info
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
+          UNIQUE_TAG="${TIMESTAMP}-${SHORT_SHA}"
+          echo "tag=${UNIQUE_TAG}" >> $GITHUB_OUTPUT
+          echo "✅ Tag generato per preprocessing: ${UNIQUE_TAG}"
+
+      - name: Build and push preprocessing service
+        id: build_push
+        run: |
+          cd preprocessing_service
+          IMAGE_TAG=${{ steps.build_info.outputs.tag }}
+          IMAGE_NAME="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/preprocessing_service"
+          
+          echo "🔨 Building preprocessing_service con tag: ${IMAGE_TAG}"
+          docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+          docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+          
+          echo "📤 Pushing immagini..."
+          docker push ${IMAGE_NAME}:${IMAGE_TAG}
+          docker push ${IMAGE_NAME}:latest
+          
+          echo "🔍 Verifica push..."
+          DIGEST=$(gcloud container images list-tags ${IMAGE_NAME} --filter="tags:${IMAGE_TAG}" --format="value(digest)" | head -1)
+          
+          if [ -z "$DIGEST" ]; then
+            echo "❌ Errore: Push fallito per ${IMAGE_TAG}"
+            exit 1
+          fi
+          
+          echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
+          echo "✅ Preprocessing service built and pushed successfully!"
+          echo "   Tag: ${IMAGE_TAG}"
+          echo "   Digest: ${DIGEST}"
+
+  # Job build recommender service
+  build-push-recommender:
+    name: Build & Push Recommender Service
+    runs-on: ubuntu-latest
+    needs: [upload-data, detect-changes]
+    if: needs.detect-changes.outputs.recommender_changed == 'true'
+    outputs:
+      image_tag: ${{ steps.build_info.outputs.tag }}
+      image_digest: ${{ steps.build_push.outputs.digest }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Google Auth
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Generate unique tag
+        id: build_info
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-8)
+          UNIQUE_TAG="${TIMESTAMP}-${SHORT_SHA}"
+          echo "tag=${UNIQUE_TAG}" >> $GITHUB_OUTPUT
+          echo "✅ Tag generato per recommender: ${UNIQUE_TAG}"
+
+      - name: Build and push recommender service
+        id: build_push
+        run: |
+          cd recommender_service
+          IMAGE_TAG=${{ steps.build_info.outputs.tag }}
+          IMAGE_NAME="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/recommender_service"
+          
+          echo "🔨 Building recommender_service con tag: ${IMAGE_TAG}"
+          docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+          docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${IMAGE_NAME}:latest
+          
+          echo "📤 Pushing immagini..."
+          docker push ${IMAGE_NAME}:${IMAGE_TAG}
+          docker push ${IMAGE_NAME}:latest
+          
+          echo "🔍 Verifica push..."
+          DIGEST=$(gcloud container images list-tags ${IMAGE_NAME} --filter="tags:${IMAGE_TAG}" --format="value(digest)" | head -1)
+          
+          if [ -z "$DIGEST" ]; then
+            echo "❌ Errore: Push fallito per ${IMAGE_TAG}"
+            exit 1
+          fi
+          
+          echo "digest=${DIGEST}" >> $GITHUB_OUTPUT
+          echo "✅ Recommender service built and pushed successfully!"
+          echo "   Tag: ${IMAGE_TAG}"
+          echo "   Digest: ${DIGEST}"
+    
+  configure-gke:
+    name: Configure GKE & Deploy Argo Workflow
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-push-preprocessing, build-push-recommender]
+    # Esegui solo se almeno un servizio è cambiato E i build sono completati con successo
+    if: |
+      always() && 
+      (needs.detect-changes.outputs.preprocessing_changed == 'true' || 
+       needs.detect-changes.outputs.recommender_changed == 'true') &&
+      (needs.build-push-preprocessing.result == 'success' || needs.build-push-preprocessing.result == 'skipped') &&
+      (needs.build-push-recommender.result == 'success' || needs.build-push-recommender.result == 'skipped')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Google Auth
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Install GKE auth plugin
+        run: gcloud components install gke-gcloud-auth-plugin
+
+      - name: Install kubectl
+        run: gcloud components install kubectl --quiet
+
+      - name: Get GKE credentials
+        run: |
+          gcloud container clusters get-credentials ${{ secrets.GCP_GKE_CLUSTER_NAME }} \
+            --zone ${{ secrets.GCP_ZONE }} \
+            --project ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Create namespaces
+        run: |
+          kubectl get namespace argo || kubectl create namespace argo
+
+      - name: Install Argo Workflows
+        run: |
+          kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/download/v3.6.5/install.yaml
+
+      - name: Decode GCP Service Account Key and .env
+        run: |
+          echo "${{ secrets.GCP_SA_KEY }}" | base64 --decode > ./gcs-key.json
+          echo "${{ secrets.ENV_FILE }}" > .env
+
+      - name: Create Docker Registry Secret for argo
+        run: |
+          kubectl delete secret gcr-json-key-gke-argo -n argo --ignore-not-found
+          kubectl create secret docker-registry gcr-json-key-gke-argo \
+            --docker-server=${{ secrets.GCP_REGION }}-docker.pkg.dev \
+            --docker-username=_json_key \
+            --docker-password="$(cat gcs-key.json)" \
+            --docker-email=${{ secrets.DOCKER_EMAIL }} \
+            --namespace=argo
+
+      - name: Create GCS key secret for argo and deployment
+        run: |
+          kubectl delete secret gcs-key-gke-argo -n argo --ignore-not-found
+          kubectl create secret generic gcs-key-gke-argo --from-file=key.json=./gcs-key.json --namespace=argo
+
+      - name: Create ConfigMaps
+        run: |
+          kubectl delete configmap service-config-gke-argo -n argo --ignore-not-found
+          kubectl create configmap service-config-gke-argo --from-env-file=.env --namespace=argo
+
+      - name: Ensure RoleBinding for Argo
+        run: |
+          kubectl get rolebinding default-admin -n argo || kubectl create rolebinding default-admin \
+            --clusterrole=admin \
+            --serviceaccount=argo:default \
+            --namespace=argo
+
+      - name: Install Argo CLI
+        run: |
+          ARGO_VERSION="v3.6.5"
+          curl -sLO https://github.com/argoproj/argo-workflows/releases/download/${ARGO_VERSION}/argo-linux-amd64.gz
+          gunzip argo-linux-amd64.gz
+          chmod +x argo-linux-amd64
+          sudo mv argo-linux-amd64 /usr/local/bin/argo
+          argo version
+
+      - name: Determine Image Tags
+        id: tags
+        run: |
+          echo "🏷️ Determinazione tag delle immagini..."
+          
+          # Determina i tag da usare basandosi sui servizi modificati
+          if [ "${{ needs.detect-changes.outputs.preprocessing_changed }}" == "true" ]; then
+            PREPROCESSING_TAG="${{ needs.build-push-preprocessing.outputs.image_tag }}"
+            echo "preprocessing_tag=${PREPROCESSING_TAG}" >> $GITHUB_OUTPUT
+            echo "✅ Preprocessing tag: ${PREPROCESSING_TAG} (nuovo)"
+          else
+            # Usa il tag latest esistente se il servizio non è stato modificato
+            PREPROCESSING_TAG="latest"
+            echo "preprocessing_tag=${PREPROCESSING_TAG}" >> $GITHUB_OUTPUT
+            echo "ℹ️ Preprocessing tag: ${PREPROCESSING_TAG} (non modificato)"
+          fi
+          
+          if [ "${{ needs.detect-changes.outputs.recommender_changed }}" == "true" ]; then
+            RECOMMENDER_TAG="${{ needs.build-push-recommender.outputs.image_tag }}"
+            echo "recommender_tag=${RECOMMENDER_TAG}" >> $GITHUB_OUTPUT
+            echo "✅ Recommender tag: ${RECOMMENDER_TAG} (nuovo)"
+          else
+            RECOMMENDER_TAG="latest"
+            echo "recommender_tag=${RECOMMENDER_TAG}" >> $GITHUB_OUTPUT
+            echo "ℹ️ Recommender tag: ${RECOMMENDER_TAG} (non modificato)"
+          fi
+
+      - name: Verify Image Availability
+        run: |
+          echo "🔍 Verifica disponibilità immagini..."
+          
+          if [ "${{ needs.detect-changes.outputs.preprocessing_changed }}" == "true" ]; then
+            PREPROCESSING_TAG="${{ steps.tags.outputs.preprocessing_tag }}"
+            IMAGE_NAME="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/preprocessing_service"
+            
+            echo "Verifying preprocessing image: ${IMAGE_NAME}:${PREPROCESSING_TAG}"
+            if ! gcloud container images list-tags ${IMAGE_NAME} --filter="tags:${PREPROCESSING_TAG}" --format="value(digest)" | head -1 > /dev/null; then
+              echo "❌ Errore: Immagine preprocessing_service:${PREPROCESSING_TAG} non trovata"
+              exit 1
+            fi
+            echo "✅ Immagine preprocessing verificata"
+          fi
+          
+          if [ "${{ needs.detect-changes.outputs.recommender_changed }}" == "true" ]; then
+            RECOMMENDER_TAG="${{ steps.tags.outputs.recommender_tag }}"
+            IMAGE_NAME="${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/recommender_service"
+            
+            echo "Verifying recommender image: ${IMAGE_NAME}:${RECOMMENDER_TAG}"
+            if ! gcloud container images list-tags ${IMAGE_NAME} --filter="tags:${RECOMMENDER_TAG}" --format="value(digest)" | head -1 > /dev/null; then
+              echo "❌ Errore: Immagine recommender_service:${RECOMMENDER_TAG} non trovata"
+              exit 1
+            fi
+            echo "✅ Immagine recommender verificata"
+          fi
+
+      - name: Generate Dynamic Argo Workflow
+        run: |
+          PREPROCESSING_TAG="${{ steps.tags.outputs.preprocessing_tag }}"
+          RECOMMENDER_TAG="${{ steps.tags.outputs.recommender_tag }}"
+          
+          echo "🏗️ Generazione workflow Argo dinamico..."
+          
+          cat > k8s-gke/argoWorkflow/job-test-cloud-dynamic.yaml << EOF
+          apiVersion: argoproj.io/v1alpha1
+          kind: Workflow
+          metadata:
+            generateName: movie-recommender-pipeline-
+          spec:
+            entrypoint: pipeline
+            
+            volumes:
+              - name: gcp-sa-key
+                secret:
+                  secretName: gcs-key-gke-argo
+            
+            podSpecPatch: |
+              imagePullSecrets:
+                - name: gcr-json-key-gke-argo
+              imagePullPolicy: Always
+            
+            templates:
+              - name: pipeline
+                steps:
+                  - - name: preprocess-dataset
+                      template: preprocess
+                  - - name: compute-similarity
+                      template: compute
+              
+              - name: preprocess
+                container:
+                  image: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/preprocessing_service:${PREPROCESSING_TAG}
+                  command: ["python"]
+                  args: ["preprocessing.py"]
+                  imagePullPolicy: Always
+                  volumeMounts:
+                    - name: gcp-sa-key
+                      mountPath: "/var/secrets"
+                      readOnly: true
+                  envFrom:
+                    - configMapRef:
+                        name: service-config-gke-argo
+                  resources:
+                    requests:
+                      memory: "128Mi"
+                      cpu: "250m"
+                    limits:
+                      memory: "512Mi"
+                      cpu: "1000m"
+              
+              - name: compute
+                container:
+                  image: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPOSITORY }}/recommender_service:${RECOMMENDER_TAG}
+                  command: ["python"]
+                  args: ["recommender.py"]
+                  imagePullPolicy: Always
+                  volumeMounts:
+                    - name: gcp-sa-key
+                      mountPath: "/var/secrets"
+                      readOnly: true
+                  envFrom:
+                    - configMapRef:
+                        name: service-config-gke-argo
+                  resources:
+                    requests:
+                      memory: "512Mi"
+                      cpu: "500m"
+                    limits:
+                      memory: "1Gi"
+                      cpu: "1000m"
+          EOF
+          
+          echo "✅ Workflow dinamico generato"
+
+      - name: Show Deployment Info
+        run: |
+          echo "📋 === INFORMAZIONI DEPLOYMENT ==="
+          echo "🔧 Servizi modificati:"
+          echo "   - Preprocessing: ${{ needs.detect-changes.outputs.preprocessing_changed }}"
+          echo "   - Recommender: ${{ needs.detect-changes.outputs.recommender_changed }}"
+          echo ""
+          echo "🏷️ Tag delle immagini:"
+          echo "   - Preprocessing: ${{ steps.tags.outputs.preprocessing_tag }}"
+          echo "   - Recommender: ${{ steps.tags.outputs.recommender_tag }}"
+          echo ""
+          echo "📦 Build results:"
+          echo "   - Preprocessing build: ${{ needs.build-push-preprocessing.result }}"
+          echo "   - Recommender build: ${{ needs.build-push-recommender.result }}"
+          echo ""
+          echo "🚀 Proceeding with Argo Workflow submission..."
+
+      - name: Submit Argo Workflow
+        run: |
+          echo "🚀 Submitting Argo Workflow..."
+          argo submit k8s-gke/argoWorkflow/job-test-cloud-dynamic.yaml -n argo --watch
+
+      - name: Get Workflow Status
+        if: always()
+        run: |
+          echo "📊 Workflow Status:"
+          argo list -n argo --running
+          argo list -n argo --completed
+
+      - name: Clean Up Sensitive Files
+        if: always()
+        run: |
+          rm -f ./gcs-key.json
+          rm -f .env
+          echo "🧹 File sensibili eliminati"
