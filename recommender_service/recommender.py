@@ -79,7 +79,7 @@ def upload_to_gcs(bucket, data, destination_blob):
             os.remove(tmp_file_path)
 
 def compute_similarity():
-    logging.info("==== INIZIO CALCOLO SIMILARITÀ! ====")
+    logging.info("==== INIZIO CALCOLO SIMILARITÀ ====")
 
     try:
         storage_client = init_gcs_client()
