@@ -9,10 +9,10 @@ terraform {
   }
   backend "remote" {
     hostname = "app.terraform.io"
-    organization = "giovy-team" 
+    organization = "ORG_NAME" 
 
     workspaces {
-      name = "terraform-remote-state" 
+      name = "WORKSPACE_NAME" 
     }
     
   }
