@@ -1,10 +1,7 @@
 name: GCP Deploy, Data Upload & GKE Configuration
 
 on:
-  workflow_run:
-    workflows: ["GCP Infrastructure Provisioning"]
-    types:
-      - completed
+  workflow_dispatch:
   push:
     branches:
       - feature/google-cloud-gke
@@ -19,8 +16,8 @@ env:
   ARTIFACT_REPOSITORY: ${{ secrets.ARTIFACT_REPOSITORY }}
 
 jobs:
+  # Job per rilevare i cambiamenti
   detect-changes:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Detect Service Changes
     runs-on: ubuntu-latest
     outputs:

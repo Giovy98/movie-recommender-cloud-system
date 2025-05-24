@@ -1,10 +1,7 @@
 name: GCP Deploy Application
 
 on:
-  workflow_run:
-    workflows: ["GCP Infrastructure Provisioning"]
-    types:
-      - completed
+  workflow_dispatch:
   push:
     branches:
       - feature/google-cloud-gke
@@ -21,7 +18,6 @@ env:
 jobs:
   # Job per rilevare i cambiamenti
   detect-changes:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Detect Service Changes
     runs-on: ubuntu-latest
     outputs:
