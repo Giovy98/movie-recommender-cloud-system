@@ -31,7 +31,7 @@ def get_gcs_bucket():
         return client.bucket(BUCKET_NAME)
     except Exception as e:
         logging.error(f"Errore inizializzazione client GCS: {e}")
-        raise RuntimeError("Impossibile inizializzare il client GCS")
+        raise RuntimeError("Impossibile inizializzare il client GCS!")
 
 # === Caricamento dati e modello con cache ===
 @lru_cache()
