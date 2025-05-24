@@ -48,7 +48,7 @@ def extract_director(text):
         return []
 
 def preprocessing():
-    logging.info("==== INIZIO PREPROCESSING ====")
+    logging.info("==== INIZIO PREPROCESSING! ====")
 
     storage_client = init_gcs_client()
     bucket = storage_client.bucket(BUCKET_NAME)
