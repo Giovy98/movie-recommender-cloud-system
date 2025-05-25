@@ -63,8 +63,8 @@ jobs:
         run: |
           echo "Controllo presenza dati in: gs://${{ secrets.GCP_BUCKET_NAME }}/raw/"
           if gsutil -q stat gs://${{ secrets.GCP_BUCKET_NAME }}/raw/*.csv; then
-            echo "I dati esistono già. Upload non necessario."
-            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "I datiue esistono già. Upload non necessario."
+            echo "skip=tr" >> $GITHUB_OUTPUT
           else
             echo "Dati non trovati. Procedo con l'upload."
             echo "skip=false" >> $GITHUB_OUTPUT
