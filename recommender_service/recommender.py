@@ -40,7 +40,7 @@ def load_dataset(bucket):
         raise
 
 def compute_similarity_matrix(tags_series):
-    logging.info("2°: Inizializzazione CountVectorizer")
+    logging.info("2°: Inizializzazione CountVectorizer!")
     cv = CountVectorizer(max_features=5000, stop_words='english')
 
     logging.info("3°: Trasformazione del dataset in matrice di feature")
