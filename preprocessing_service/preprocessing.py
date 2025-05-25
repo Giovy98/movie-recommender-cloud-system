@@ -53,7 +53,7 @@ def preprocessing():
     storage_client = init_gcs_client()
     bucket = storage_client.bucket(BUCKET_NAME)
 
-    logging.info("1°: Caricamento Dataset dal bucket GCS!")
+    logging.info("1°: Caricamento Dataset dal bucket GCS")
     movies = download_csv_to_df(bucket, MOVIES_BLOB)
     credits = download_csv_to_df(bucket, CREDITS_BLOB)
 

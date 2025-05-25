@@ -91,7 +91,7 @@ def recommend(movie: str):
 # === Endpoints ===
 @app.get("/", tags=["Info"])
 def root():
-    return {"message": "Recommendation API is running"}
+    return {"message": "Recommendation API is running!"}
 
 @app.get("/healthz", tags=["Monitoring!"])
 def health_check():
