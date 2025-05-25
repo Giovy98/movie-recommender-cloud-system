@@ -39,7 +39,7 @@ jobs:
               - 'api_service/**'
             ui_service:
               - 'ui_service/**'
-          base: feature/google-cloud-gke
+          base: main
 
   
   build-push-api: # Build & Push api_service Service

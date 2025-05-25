@@ -38,8 +38,7 @@ jobs:
               - 'preprocessing_service/**'
             recommender_service:
               - 'recommender_service/**'
-          base: feature/google-cloud-gke
-
+          base: main
   upload-data: # Upload data to GCS
     name: Upload Data to GCS
     runs-on: ubuntu-latest
