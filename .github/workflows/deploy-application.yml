@@ -181,16 +181,16 @@ jobs:
           export REGION=${{ secrets.GCP_REGION }}
           export PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
           export ARTIFACT_REPOSITORY=${{ secrets.ARTIFACT_REPOSITORY }}
-          export GITHUB_SHA=${{ github.sha }}
 
           envsubst < k8s-gke/deployment/k8s-cloud-api.yml > k8s-gke/deployment/k8s-cloud-api-new.yml
           envsubst < k8s-gke/deployment/k8s-cloud-ui.yml > k8s-gke/deployment/k8s-cloud-ui-new.yml
-
       - name: Apply Kubernetes manifests
         run: |
           echo "Deploying API and UI services..."
           kubectl apply -f k8s-gke/deployment/k8s-cloud-api-new.yml
           kubectl apply -f k8s-gke/deployment/k8s-cloud-ui-new.yml
+      - name: Rollout Update Pods
+        run: kubectl rollout restart deployment -n deployment
 
       - name: Clean Up Sensitive Files
         if: always()
