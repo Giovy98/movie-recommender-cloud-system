@@ -112,7 +112,11 @@ jobs:
     name: Deploy Services to GKE
     runs-on: ubuntu-latest
     needs: [detect-changes, build-push-api, build-push-ui]
-    if: always()
+    # Esegui solo se almeno un servizio è cambiato
+    if: |
+      always() && 
+      (needs.detect-changes.outputs.api_changed == 'true' || 
+       needs.detect-changes.outputs.ui_changed == 'true')
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -187,6 +191,9 @@ jobs:
           echo "Deploying API and UI services..."
           kubectl apply -f k8s-gke/deployment/k8s-cloud-api-new.yml
           kubectl apply -f k8s-gke/deployment/k8s-cloud-ui-new.yml
+      
+      - name: Rollout Update Pods
+        run: kubectl rollout restart deployment -n deployment
 
       - name: Clean Up Sensitive Files
         if: always()
