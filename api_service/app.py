@@ -52,7 +52,7 @@ def load_data():
 def load_model():
     bucket = get_gcs_bucket()
     try:
-        logging.info("Caricamento matrice di similarità da GCS")
+        logging.info("Caricamento matrice di similarità da GCS!!!!")
         model_blob = bucket.blob(MODEL_BLOB)
         model_bytes = model_blob.download_as_bytes()
         
