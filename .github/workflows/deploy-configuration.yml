@@ -149,10 +149,7 @@ jobs:
     name: Configure GKE & Deploy Argo Workflow
     runs-on: ubuntu-latest
     needs: [detect-changes, build-push-preprocessing, build-push-recommender]
-    if: |
-      always() && 
-      (needs.detect-changes.outputs.preprocessing_changed == 'true' || 
-       needs.detect-changes.outputs.recommender_changed == 'true') 
+    if: always()
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
